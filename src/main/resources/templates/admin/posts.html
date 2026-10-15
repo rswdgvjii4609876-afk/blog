@@ -22,14 +22,14 @@
             <div class="page-heading">
                 <p class="eyebrow">后台文章管理</p>
                 <h1 id="admin-title">文章管理</h1>
-                <p class="page-description">管理博客中的文章内容</p>
+                <p class="page-description">管理博客中的文章内容 · 共 <span th:text="${postPage.totalElements}">0</span> 篇</p>
             </div>
             <a class="button button-primary" th:href="@{/admin/posts/new}">
                 <span aria-hidden="true">+</span> 新建文章
             </a>
         </section>
 
-        <section th:if="${hasPosts}" class="admin-list" aria-label="文章列表">
+        <section th:if="${postPage.hasContent()}" class="admin-list" aria-label="文章列表">
             <ul class="admin-list-items">
                 <li th:each="post : ${posts}" class="admin-list-item">
                     <article class="admin-item">
@@ -53,7 +53,15 @@
             </ul>
         </section>
 
-        <section th:unless="${hasPosts}" class="empty-state admin-empty" aria-labelledby="empty-title">
+        <nav class="pagination" th:if="${postPage.totalPages > 1}" aria-label="后台文章分页">
+            <a th:if="${postPage.hasPrevious()}" th:href="@{/admin/posts(page=${postPage.number - 1})}" rel="prev">上一页</a>
+            <span class="pagination-disabled" th:unless="${postPage.hasPrevious()}" aria-disabled="true">上一页</span>
+            <span class="pagination-summary" th:text="|第 ${postPage.number + 1} / ${postPage.totalPages} 页|">第 1 / 2 页</span>
+            <a th:if="${postPage.hasNext()}" th:href="@{/admin/posts(page=${postPage.number + 1})}" rel="next">下一页</a>
+            <span class="pagination-disabled" th:unless="${postPage.hasNext()}" aria-disabled="true">下一页</span>
+        </nav>
+
+        <section th:unless="${postPage.hasContent()}" class="empty-state admin-empty" aria-labelledby="empty-title">
             <h2 id="empty-title">暂无文章</h2>
             <p>新建文章后，可以在这里管理草稿和已发布文章。</p>
         </section>

@@ -176,6 +176,24 @@ textarea {
     font-size: 12px;
 }
 
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 28px;
+    font-size: 14px;
+}
+
+.pagination-summary {
+    color: var(--color-secondary);
+}
+
+.pagination-disabled {
+    color: var(--color-tertiary);
+}
+
 .admin-list,
 .form-panel {
     border: 1px solid rgb(210 210 215 / 48%);

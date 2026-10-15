@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${postCount} + ' 篇文章 · Blog'">Blog</title>
+    <title th:text="${postPage.totalElements} + ' 篇文章 · Blog'">Blog</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
@@ -27,10 +27,10 @@
         <section class="latest-section" aria-labelledby="latest-title">
             <header class="section-heading">
                 <h2 id="latest-title">最新文章</h2>
-                <p class="article-count">共 <span th:text="${postCount}">0</span> 篇</p>
+                <p class="article-count">共 <span th:text="${postPage.totalElements}">0</span> 篇</p>
             </header>
 
-            <div th:if="${hasPosts}" class="article-list">
+            <div th:if="${postPage.hasContent()}" class="article-list">
                 <article th:each="post : ${posts}" class="article-row">
                     <div class="article-copy">
                         <h3 class="article-title">
@@ -45,7 +45,15 @@
                 </article>
             </div>
 
-            <section th:unless="${hasPosts}" class="empty-state" aria-labelledby="empty-title">
+            <nav class="pagination" th:if="${postPage.totalPages > 1}" aria-label="文章分页">
+                <a th:if="${postPage.hasPrevious()}" th:href="@{/(page=${postPage.number - 1})}" rel="prev">上一页</a>
+                <span class="pagination-disabled" th:unless="${postPage.hasPrevious()}" aria-disabled="true">上一页</span>
+                <span class="pagination-summary" th:text="|第 ${postPage.number + 1} / ${postPage.totalPages} 页|">第 1 / 2 页</span>
+                <a th:if="${postPage.hasNext()}" th:href="@{/(page=${postPage.number + 1})}" rel="next">下一页</a>
+                <span class="pagination-disabled" th:unless="${postPage.hasNext()}" aria-disabled="true">下一页</span>
+            </nav>
+
+            <section th:unless="${postPage.hasContent()}" class="empty-state" aria-labelledby="empty-title">
                 <h3 id="empty-title">暂无已发布文章</h3>
                 <p>文章发布后会显示在这里。</p>
             </section>

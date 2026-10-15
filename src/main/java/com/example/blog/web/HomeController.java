@@ -3,19 +3,23 @@ package com.example.blog.web;
 import com.example.blog.domain.Post;
 import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 公开文章控制器：只展示已发布文章，列表按 id 升序。
+ * 公开文章控制器：只展示已发布文章，按创建时间和 id 倒序分页。
  */
 @Controller
 public class HomeController {
+
+    private static final int PAGE_SIZE = 5;
 
     private final PostRepository postRepository;
 
@@ -24,11 +28,19 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    public String index(Model model) {
-        var posts = postRepository.findByStatus(PostStatus.PUBLISHED, Sort.by(Sort.Direction.ASC, "id"));
-        model.addAttribute("posts", posts);
-        model.addAttribute("hasPosts", !posts.isEmpty());
-        model.addAttribute("postCount", posts.size());
+    public String index(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
+        // JPA 的分页偏移使用 int。
+        if (page < 0 || (long) page * PAGE_SIZE > Integer.MAX_VALUE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        var pageable = PageRequest.of(page, PAGE_SIZE,
+            Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        var postPage = postRepository.findByStatus(PostStatus.PUBLISHED, pageable);
+        if (page > 0 && page >= postPage.getTotalPages()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        model.addAttribute("postPage", postPage);
+        model.addAttribute("posts", postPage.getContent());
         return "index";
     }
 

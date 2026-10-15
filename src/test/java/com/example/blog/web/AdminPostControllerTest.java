@@ -11,6 +11,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,12 +22,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AdminPostController.class)
 class AdminPostControllerTest {
 
+    private static final Sort POST_SORT = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -44,9 +54,13 @@ class AdminPostControllerTest {
 
     @Test
     void adminPostsRendersWhenPresent() throws Exception {
-        Post p1 = new Post("后台标题 1", "后台摘要 1", "后台正文 1", PostStatus.PUBLISHED);
-        Post p2 = new Post("后台标题 2", "后台摘要 2", "后台正文 2", PostStatus.DRAFT);
-        when(postRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))).thenReturn(List.of(p1, p2));
+        var pageable = PageRequest.of(0, 10, POST_SORT);
+        var posts = IntStream.rangeClosed(1, 10)
+            .mapToObj(i -> new Post("后台标题 " + i, "后台摘要 " + i, "后台正文 " + i,
+                i % 2 == 0 ? PostStatus.DRAFT : PostStatus.PUBLISHED))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, 11);
+        when(postRepository.findAll(pageable)).thenReturn(postPage);
 
         var result = mockMvc.perform(get("/admin/posts"))
             .andExpect(status().isOk())
@@ -58,25 +72,117 @@ class AdminPostControllerTest {
             .andExpect(content().string(containsString("草稿")))
             .andExpect(content().string(containsString("/admin/posts/new")))
             .andExpect(content().string(containsString("href=\"/posts/")))
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("共 <span>11</span> 篇")))
+            .andExpect(content().string(containsString("第 1 / 2 页")))
+            .andExpect(content().string(containsString("aria-disabled=\"true\">上一页</span>")))
+            .andExpect(content().string(not(containsString("rel=\"prev\""))))
+            .andExpect(content().string(containsString("href=\"/admin/posts?page=1\"")))
             .andReturn();
 
         String html = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         String[] articles = html.split("<article class=\"admin-item\">");
-        assertThat(articles).hasSize(3);
+        assertThat(articles).hasSize(11);
         String publishedArticle = articles[1].split("</article>")[0];
         String draftArticle = articles[2].split("</article>")[0];
         assertThat(publishedArticle).contains("已发布", "href=\"/posts/", "编辑", "删除");
         assertThat(draftArticle).contains("草稿", "编辑", "删除").doesNotContain("href=\"/posts/", "查看");
+
+        mockMvc.perform(get("/admin/posts").param("page", "0").param("size", "1").param("sort", "id,asc"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("postPage", postPage));
+        verify(postRepository, times(2)).findAll(pageable);
+        verify(postRepository, never()).findByStatus(any(PostStatus.class), any(Pageable.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 2})
+    void adminPostsHidesPaginationForEmptyOrSinglePage(int count) throws Exception {
+        var pageable = PageRequest.of(0, 10, POST_SORT);
+        var posts = IntStream.rangeClosed(1, count)
+            .mapToObj(i -> new Post("后台文章 " + i, "摘要", "正文",
+                i % 2 == 0 ? PostStatus.DRAFT : PostStatus.PUBLISHED))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, count);
+        when(postRepository.findAll(pageable)).thenReturn(postPage);
+
+        var result = mockMvc.perform(get("/admin/posts"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/posts"))
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("共 <span>" + count + "</span> 篇")))
+            .andExpect(content().string(not(containsString("class=\"pagination\""))));
+        if (count == 0) {
+            result.andExpect(content().string(containsString("暂无文章")));
+            var nextPage = PageRequest.of(1, 10, POST_SORT);
+            when(postRepository.findAll(nextPage)).thenReturn(Page.empty(nextPage));
+            mockMvc.perform(get("/admin/posts").param("page", "1"))
+                .andExpect(status().isNotFound());
+        } else {
+            result.andExpect(content().string(not(containsString("暂无文章"))));
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"11, 1, false", "21, 10, true"})
+    void adminPostsRendersSecondPageWithCorrectNavigation(long total, int count, boolean hasNext) throws Exception {
+        var pageable = PageRequest.of(1, 10, POST_SORT);
+        var posts = IntStream.rangeClosed(1, count)
+            .mapToObj(i -> new Post("后台第二页 " + i, "摘要", "正文",
+                i % 2 == 0 ? PostStatus.PUBLISHED : PostStatus.DRAFT))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, total);
+        when(postRepository.findAll(pageable)).thenReturn(postPage);
+
+        var result = mockMvc.perform(get("/admin/posts").param("page", "1"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/posts"))
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("草稿")))
+            .andExpect(content().string(containsString("共 <span>" + total + "</span> 篇")))
+            .andExpect(content().string(containsString("href=\"/admin/posts?page=0\"")))
+            .andExpect(content().string(containsString(hasNext ? "第 2 / 3 页" : "第 2 / 2 页")));
+        if (hasNext) {
+            result.andExpect(content().string(containsString("已发布")))
+                .andExpect(content().string(containsString("href=\"/admin/posts?page=2\"")));
+        } else {
+            result.andExpect(content().string(containsString("aria-disabled=\"true\">下一页</span>")))
+                .andExpect(content().string(not(containsString("rel=\"next\""))));
+        }
+        assertThat(result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
+            .split("<article class=\"admin-item\">")).hasSize(count + 1);
+        verify(postRepository).findAll(pageable);
     }
 
     @Test
-    void adminPostsRendersEmptyStateWhenNoPosts() throws Exception {
-        when(postRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))).thenReturn(List.of());
+    void adminPostsRejectsNegativePagesAndOffsetsBeyondJpaLimit() throws Exception {
+        for (String page : List.of("-1", "2147483647")) {
+            mockMvc.perform(get("/admin/posts").param("page", page))
+                .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(postRepository);
+    }
 
-        mockMvc.perform(get("/admin/posts"))
-            .andExpect(status().isOk())
-            .andExpect(view().name("admin/posts"))
-            .andExpect(content().string(containsString("暂无文章")));
+    @Test
+    void adminPostsRejectsInvalidPageBindings() throws Exception {
+        for (String page : List.of("abc", "1.5", "2147483648")) {
+            mockMvc.perform(get("/admin/posts").param("page", page))
+                .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(postRepository);
+    }
+
+    @Test
+    void adminPostsReturnsNotFoundForPageBeyondLast() throws Exception {
+        var pageable = PageRequest.of(999, 10, POST_SORT);
+        when(postRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(), pageable, 11));
+
+        mockMvc.perform(get("/admin/posts").param("page", "999"))
+            .andExpect(status().isNotFound());
+        verify(postRepository).findAll(pageable);
     }
 
     @Test

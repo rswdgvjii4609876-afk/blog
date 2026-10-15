@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import com.example.blog.domain.Post;
 import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -19,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Controller
 public class AdminPostController {
 
+    private static final int PAGE_SIZE = 10;
+
     private final PostRepository postRepository;
 
     public AdminPostController(PostRepository postRepository) {
@@ -26,10 +29,19 @@ public class AdminPostController {
     }
 
     @GetMapping("/admin/posts")
-    public String listPosts(Model model) {
-        var posts = postRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
-        model.addAttribute("posts", posts);
-        model.addAttribute("hasPosts", !posts.isEmpty());
+    public String listPosts(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
+        // JPA 的分页偏移使用 int。
+        if (page < 0 || (long) page * PAGE_SIZE > Integer.MAX_VALUE) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        var pageable = PageRequest.of(page, PAGE_SIZE,
+            Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        var postPage = postRepository.findAll(pageable);
+        if (page > 0 && page >= postPage.getTotalPages()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        model.addAttribute("postPage", postPage);
+        model.addAttribute("posts", postPage.getContent());
         return "admin/posts";
     }
 

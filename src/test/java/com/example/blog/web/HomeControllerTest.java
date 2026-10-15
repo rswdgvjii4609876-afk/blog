@@ -4,21 +4,32 @@ import com.example.blog.domain.Post;
 import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(HomeController.class)
 class HomeControllerTest {
 
+    private static final Sort POST_SORT = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -39,56 +52,137 @@ class HomeControllerTest {
 
     @Test
     void indexRendersPostsWhenPresent() throws Exception {
-        Post p1 = new Post("你好，世界", "第一篇摘要", "第一篇内容", PostStatus.PUBLISHED);
-        Post p2 = new Post("第二篇", "第二篇摘要", "第二篇内容", PostStatus.PUBLISHED);
-        Post draft = new Post("未公开标题", "未公开摘要", "未公开正文", PostStatus.DRAFT);
-        Sort sort = Sort.by(Sort.Direction.ASC, "id");
-        when(postRepository.findAll(sort)).thenReturn(List.of(p1, draft, p2));
-        when(postRepository.findByStatus(PostStatus.PUBLISHED, sort)).thenReturn(List.of(p1, p2));
+        var pageable = PageRequest.of(0, 5, POST_SORT);
+        var posts = IntStream.rangeClosed(1, 5)
+            .mapToObj(i -> new Post("公开文章 " + i, "摘要", "正文", PostStatus.PUBLISHED))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, 6);
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, pageable)).thenReturn(postPage);
 
-        mockMvc.perform(get("/"))
+        var result = mockMvc.perform(get("/"))
             .andExpect(status().isOk())
             .andExpect(view().name("index"))
             .andExpect(content().string(containsString("Blog")))
-            .andExpect(content().string(containsString("你好，世界")))
-            .andExpect(content().string(containsString("第二篇")))
+            .andExpect(content().string(containsString("公开文章 1")))
+            .andExpect(content().string(containsString("公开文章 5")))
             .andExpect(content().string(containsString("最新文章")))
             .andExpect(content().string(not(containsString("未公开"))))
-            .andExpect(model().attribute("posts", List.of(p1, p2)))
-            .andExpect(model().attribute("hasPosts", true))
-            .andExpect(model().attribute("postCount", 2));
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("共 <span>6</span> 篇")))
+            .andExpect(content().string(containsString("第 1 / 2 页")))
+            .andExpect(content().string(containsString("aria-disabled=\"true\">上一页</span>")))
+            .andExpect(content().string(not(containsString("rel=\"prev\""))))
+            .andExpect(content().string(containsString("href=\"/?page=1\"")))
+            .andReturn();
 
-        verify(postRepository).findByStatus(PostStatus.PUBLISHED, sort);
-        verify(postRepository, never()).findAll(any(Sort.class));
+        assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)
+            .split("<article class=\"article-row\">")).hasSize(6);
+        mockMvc.perform(get("/").param("page", "0").param("size", "1").param("sort", "id,asc"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("postPage", postPage));
+
+        verify(postRepository, times(2)).findByStatus(PostStatus.PUBLISHED, pageable);
+        verify(postRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
     void indexRendersEmptyStateWhenOnlyDraftsExist() throws Exception {
         Post draft = new Post("未公开标题", "未公开摘要", "未公开正文", PostStatus.DRAFT);
-        Sort sort = Sort.by(Sort.Direction.ASC, "id");
-        when(postRepository.findAll(sort)).thenReturn(List.of(draft));
-        when(postRepository.findByStatus(PostStatus.PUBLISHED, sort)).thenReturn(List.of());
+        var pageable = PageRequest.of(0, 5, POST_SORT);
+        var nextPage = PageRequest.of(1, 5, POST_SORT);
+        when(postRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(draft), pageable, 1));
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, pageable)).thenReturn(Page.empty(pageable));
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, nextPage)).thenReturn(Page.empty(nextPage));
 
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
             .andExpect(view().name("index"))
             .andExpect(content().string(containsString("暂无已发布文章")))
             .andExpect(content().string(not(containsString("未公开"))))
-            .andExpect(model().attribute("hasPosts", false))
-            .andExpect(model().attribute("postCount", 0));
+            .andExpect(content().string(containsString("共 <span>0</span> 篇")))
+            .andExpect(content().string(not(containsString("class=\"pagination\""))))
+            .andExpect(model().attribute("posts", List.of()));
 
-        verify(postRepository).findByStatus(PostStatus.PUBLISHED, sort);
-        verify(postRepository, never()).findAll(any(Sort.class));
+        mockMvc.perform(get("/").param("page", "1"))
+            .andExpect(status().isNotFound());
+
+        verify(postRepository).findByStatus(PostStatus.PUBLISHED, pageable);
+        verify(postRepository).findByStatus(PostStatus.PUBLISHED, nextPage);
+        verify(postRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
     void indexIncludesAdminLink() throws Exception {
-        when(postRepository.findByStatus(PostStatus.PUBLISHED, Sort.by(Sort.Direction.ASC, "id"))).thenReturn(List.of());
+        var pageable = PageRequest.of(0, 5, POST_SORT);
+        var post = new Post("单篇文章", "摘要", "正文", PostStatus.PUBLISHED);
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, pageable))
+            .thenReturn(new PageImpl<>(List.of(post), pageable, 1));
 
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("/admin/posts")))
-            .andExpect(content().string(containsString("后台管理")));
+            .andExpect(content().string(containsString("后台管理")))
+            .andExpect(content().string(containsString("单篇文章")))
+            .andExpect(content().string(not(containsString("class=\"pagination\""))));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"6, 1, false", "11, 5, true"})
+    void indexRendersSecondPageWithCorrectNavigation(long total, int count, boolean hasNext) throws Exception {
+        var pageable = PageRequest.of(1, 5, POST_SORT);
+        var posts = IntStream.rangeClosed(1, count)
+            .mapToObj(i -> new Post("第二页文章 " + i, "摘要", "正文", PostStatus.PUBLISHED))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, total);
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, pageable)).thenReturn(postPage);
+
+        var result = mockMvc.perform(get("/").param("page", "1"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("index"))
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("共 <span>" + total + "</span> 篇")))
+            .andExpect(content().string(containsString("href=\"/?page=0\"")))
+            .andExpect(content().string(containsString(hasNext ? "第 2 / 3 页" : "第 2 / 2 页")));
+        if (hasNext) {
+            result.andExpect(content().string(containsString("href=\"/?page=2\"")));
+        } else {
+            result.andExpect(content().string(containsString("aria-disabled=\"true\">下一页</span>")))
+                .andExpect(content().string(not(containsString("rel=\"next\""))));
+        }
+        assertThat(result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
+            .split("<article class=\"article-row\">")).hasSize(count + 1);
+        verify(postRepository).findByStatus(PostStatus.PUBLISHED, pageable);
+    }
+
+    @Test
+    void indexRejectsNegativePagesAndOffsetsBeyondJpaLimit() throws Exception {
+        for (String page : List.of("-1", "2147483647")) {
+            mockMvc.perform(get("/").param("page", page))
+                .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(postRepository);
+    }
+
+    @Test
+    void indexRejectsInvalidPageBindings() throws Exception {
+        for (String page : List.of("abc", "1.5", "2147483648")) {
+            mockMvc.perform(get("/").param("page", page))
+                .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(postRepository);
+    }
+
+    @Test
+    void indexReturnsNotFoundForPageBeyondLast() throws Exception {
+        var pageable = PageRequest.of(999, 5, POST_SORT);
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, pageable))
+            .thenReturn(new PageImpl<>(List.of(), pageable, 6));
+
+        mockMvc.perform(get("/").param("page", "999"))
+            .andExpect(status().isNotFound());
+        verify(postRepository).findByStatus(PostStatus.PUBLISHED, pageable);
     }
 
     @Test
