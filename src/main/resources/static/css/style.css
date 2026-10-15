@@ -49,6 +49,7 @@ a:hover {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
     outline: 3px solid rgb(0 102 204 / 22%);
     outline-offset: 2px;
@@ -56,6 +57,7 @@ textarea:focus-visible {
 
 button,
 input,
+select,
 textarea {
     font: inherit;
 }
@@ -445,6 +447,17 @@ textarea {
     overflow-wrap: anywhere;
 }
 
+.status-badge {
+    display: inline-flex;
+    margin-right: 8px;
+    border-radius: 999px;
+    padding: 2px 9px;
+    background: var(--color-background);
+    color: var(--color-secondary);
+    font-size: 12px;
+    font-weight: 550;
+}
+
 .admin-actions {
     display: flex;
     align-items: center;
@@ -499,6 +512,7 @@ textarea {
 }
 
 .form-field input,
+.form-field select,
 .form-field textarea {
     display: block;
     width: 100%;
@@ -522,6 +536,7 @@ textarea {
 }
 
 .form-field input:focus,
+.form-field select:focus,
 .form-field textarea:focus {
     border-color: var(--color-link);
     outline: 3px solid rgb(0 102 204 / 14%);

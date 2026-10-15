@@ -1,6 +1,8 @@
 package com.example.blog.web;
 
+import com.example.blog.domain.PostStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public class PostForm {
@@ -15,6 +17,9 @@ public class PostForm {
 
     @NotBlank(message = "正文不能为空")
     private String content;
+
+    @NotNull(message = "请选择文章状态")
+    private PostStatus status;
 
     public String getTitle() {
         return title;
@@ -38,5 +43,13 @@ public class PostForm {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public PostStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PostStatus status) {
+        this.status = status;
     }
 }

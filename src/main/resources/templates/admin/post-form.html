@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${postId == null ? '发布文章 · Blog' : '编辑文章 · Blog'}">发布文章 · Blog</title>
+    <title th:text="${postId == null ? '新建文章 · Blog' : '编辑文章 · Blog'}">新建文章 · Blog</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
@@ -21,8 +21,8 @@
     <main class="site-container form-page">
         <section class="form-panel" aria-labelledby="form-title">
             <header class="form-heading">
-                <h1 id="form-title" th:text="${postId == null ? '发布文章' : '编辑文章'}">发布文章</h1>
-                <p class="page-description" th:text="${postId == null ? '创建一篇新的博客文章' : '修改文章内容并保存'}">创建一篇新的博客文章</p>
+                <h1 id="form-title" th:text="${postId == null ? '新建文章' : '编辑文章'}">新建文章</h1>
+                <p class="page-description" th:text="${postId == null ? '创建文章，保存为草稿或直接发布' : '修改文章内容和状态并保存'}">创建文章，保存为草稿或直接发布</p>
             </header>
 
             <form class="post-form" method="post" th:object="${postForm}" th:action="${postId == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
@@ -44,8 +44,19 @@
                     <span id="content-error" class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}">正文错误</span>
                 </div>
 
+                <div class="form-field" th:if="${postId != null or #fields.hasErrors('status')}">
+                    <label for="status" th:if="${postId != null}">状态</label>
+                    <select id="status" th:if="${postId != null}" th:field="*{status}" th:attr="aria-describedby=${#fields.hasErrors('status') ? 'status-error' : null}">
+                        <option value="DRAFT">草稿</option>
+                        <option value="PUBLISHED">已发布</option>
+                    </select>
+                    <span id="status-error" class="field-error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">状态错误</span>
+                </div>
+
                 <div class="form-actions">
-                    <button class="button button-primary" type="submit" th:text="${postId == null ? '发布文章' : '保存修改'}">发布文章</button>
+                    <button class="button button-secondary" type="submit" name="status" value="DRAFT" th:if="${postId == null}">保存草稿</button>
+                    <button class="button button-primary" type="submit" name="status" value="PUBLISHED" th:if="${postId == null}">发布文章</button>
+                    <button class="button button-primary" type="submit" th:if="${postId != null}">保存修改</button>
                     <a class="button button-secondary" th:href="@{/admin/posts}">取消</a>
                 </div>
             </form>

@@ -1,6 +1,7 @@
 package com.example.blog.config;
 
 import com.example.blog.domain.Post;
+import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,17 +33,20 @@ public class DataInitializer {
                 new Post(
                     "你好，世界",
                     "这是个人博客的第一篇文章。",
-                    "欢迎来到我的个人博客。这里我会记录学习笔记、技术心得和生活随想。"
+                    "欢迎来到我的个人博客。这里我会记录学习笔记、技术心得和生活随想。",
+                    PostStatus.PUBLISHED
                 ),
                 new Post(
                     "Spring Boot 起步笔记",
                     "从 Spring Initializr 到第一个可运行的 Web 应用。",
-                    "本文记录了如何用 Spring Initializr 生成项目、用 Maven Wrapper 构建、以及常见的启动期问题排查。"
+                    "本文记录了如何用 Spring Initializr 生成项目、用 Maven Wrapper 构建、以及常见的启动期问题排查。",
+                    PostStatus.PUBLISHED
                 ),
                 new Post(
                     "为什么用 Thymeleaf",
                     "服务端渲染对个人博客来说简单可靠。",
-                    "Thymeleaf 是 Spring 生态里最常用的模板引擎之一，语法接近 HTML，对初学者友好。"
+                    "Thymeleaf 是 Spring 生态里最常用的模板引擎之一，语法接近 HTML，对初学者友好。",
+                    PostStatus.PUBLISHED
                 )
             );
             postRepository.saveAll(samples);

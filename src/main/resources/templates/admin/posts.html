@@ -25,7 +25,7 @@
                 <p class="page-description">管理博客中的文章内容</p>
             </div>
             <a class="button button-primary" th:href="@{/admin/posts/new}">
-                <span aria-hidden="true">+</span> 发布文章
+                <span aria-hidden="true">+</span> 新建文章
             </a>
         </section>
 
@@ -36,10 +36,13 @@
                         <div class="admin-item-copy">
                             <h2 class="admin-item-title" th:text="${post.title}">标题</h2>
                             <p class="admin-item-summary" th:text="${post.summary}">摘要</p>
-                            <p class="admin-item-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</p>
+                            <p class="admin-item-date">
+                                <span class="status-badge" th:text="${post.status == T(com.example.blog.domain.PostStatus).PUBLISHED ? '已发布' : '草稿'}">状态</span>
+                                <time th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</time>
+                            </p>
                         </div>
                         <nav class="admin-actions" aria-label="文章操作">
-                            <a class="action-link" th:href="@{/posts/{id}(id=${post.id})}">查看</a>
+                            <a class="action-link" th:if="${post.status == T(com.example.blog.domain.PostStatus).PUBLISHED}" th:href="@{/posts/{id}(id=${post.id})}">查看</a>
                             <a class="button button-secondary" th:href="@{/admin/posts/{id}/edit(id=${post.id})}">编辑</a>
                             <form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}">
                                 <button class="button button-danger" type="submit">删除</button>
@@ -52,7 +55,7 @@
 
         <section th:unless="${hasPosts}" class="empty-state admin-empty" aria-labelledby="empty-title">
             <h2 id="empty-title">暂无文章</h2>
-            <p>发布第一篇文章后，它会显示在这里。</p>
+            <p>新建文章后，可以在这里管理草稿和已发布文章。</p>
         </section>
     </main>
 

@@ -2,6 +2,7 @@ package com.example.blog.web;
 
 import jakarta.validation.Valid;
 import com.example.blog.domain.Post;
+import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,7 @@ public class AdminPostController {
         postForm.setTitle(post.getTitle());
         postForm.setSummary(post.getSummary());
         postForm.setContent(post.getContent());
+        postForm.setStatus(post.getStatus());
         model.addAttribute("postForm", postForm);
         model.addAttribute("postId", id);
         return "admin/post-form";
@@ -59,9 +61,11 @@ public class AdminPostController {
         if (bindingResult.hasErrors()) {
             return "admin/post-form";
         }
-        Post post = new Post(postForm.getTitle(), postForm.getSummary(), postForm.getContent());
+        Post post = new Post(postForm.getTitle(), postForm.getSummary(), postForm.getContent(), postForm.getStatus());
         Post saved = postRepository.save(post);
-        return "redirect:/posts/" + saved.getId();
+        return post.getStatus() == PostStatus.PUBLISHED
+            ? "redirect:/posts/" + saved.getId()
+            : "redirect:/admin/posts";
     }
 
     @PostMapping("/admin/posts/{id}")
@@ -77,9 +81,11 @@ public class AdminPostController {
         }
         Post post = postRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        post.update(postForm.getTitle(), postForm.getSummary(), postForm.getContent());
+        post.update(postForm.getTitle(), postForm.getSummary(), postForm.getContent(), postForm.getStatus());
         postRepository.save(post);
-        return "redirect:/posts/" + id;
+        return post.getStatus() == PostStatus.PUBLISHED
+            ? "redirect:/posts/" + id
+            : "redirect:/admin/posts";
     }
 
     @PostMapping("/admin/posts/{id}/delete")

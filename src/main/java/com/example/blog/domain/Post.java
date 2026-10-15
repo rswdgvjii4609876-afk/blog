@@ -2,6 +2,8 @@ package com.example.blog.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -9,9 +11,10 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Objects;
 
 /**
- * 博客文章实体（最小字段：标题、摘要、正文、创建时间）。
+ * 博客文章实体（标题、摘要、正文、状态、创建时间）。
  */
 @Entity
 @Table(name = "posts")
@@ -30,6 +33,10 @@ public class Post {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PostStatus status;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -37,13 +44,15 @@ public class Post {
         // JPA requires a no-arg constructor
     }
 
-    public Post(String title, String summary, String content) {
+    public Post(String title, String summary, String content, PostStatus status) {
+        this.status = Objects.requireNonNull(status, "status must not be null");
         this.title = title;
         this.summary = summary;
         this.content = content;
     }
 
-    public void update(String title, String summary, String content) {
+    public void update(String title, String summary, String content, PostStatus status) {
+        this.status = Objects.requireNonNull(status, "status must not be null");
         this.title = title;
         this.summary = summary;
         this.content = content;
@@ -60,5 +69,6 @@ public class Post {
     public String getTitle() { return title; }
     public String getSummary() { return summary; }
     public String getContent() { return content; }
+    public PostStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
 }
