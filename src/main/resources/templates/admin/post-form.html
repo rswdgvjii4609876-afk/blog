@@ -2,17 +2,19 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>新增文章</title>
+    <title>发布新文章</title>
 </head>
 <body>
     <header>
-        <a th:href="@{/}">返回首页</a>
+        <a th:href="@{/admin/posts}">返回后台文章列表</a>
+        <span> | </span>
+        <a th:href="@{/}">返回博客首页</a>
     </header>
 
     <main>
-        <h1>新增文章</h1>
+        <h1>发布新文章</h1>
 
-        <form method="post" action="/posts">
+        <form method="post" action="/admin/posts">
             <p>
                 <label for="title">标题</label><br>
                 <input id="title" name="title" type="text">
@@ -28,7 +30,7 @@
                 <textarea id="content" name="content" rows="10" cols="80"></textarea>
             </p>
 
-            <button type="submit">提交</button>
+            <button type="submit">发布</button>
         </form>
     </main>
 </body>

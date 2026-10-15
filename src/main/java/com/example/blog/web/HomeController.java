@@ -8,8 +8,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -31,22 +29,6 @@ public class HomeController {
         model.addAttribute("hasPosts", !posts.isEmpty());
         model.addAttribute("postCount", posts.size());
         return "index";
-    }
-
-    @GetMapping("/posts/new")
-    public String newPostForm() {
-        return "post-form";
-    }
-
-    @PostMapping("/posts")
-    public String createPost(
-        @RequestParam String title,
-        @RequestParam String summary,
-        @RequestParam String content
-    ) {
-        Post post = new Post(title, summary, content);
-        Post saved = postRepository.save(post);
-        return "redirect:/posts/" + saved.getId();
     }
 
     @GetMapping("/posts/{id}")

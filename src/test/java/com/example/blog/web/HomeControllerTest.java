@@ -61,45 +61,13 @@ class HomeControllerTest {
     }
 
     @Test
-    void indexIncludesNewPostLink() throws Exception {
+    void indexIncludesAdminLink() throws Exception {
         when(postRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))).thenReturn(List.of());
 
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("/posts/new")))
-            .andExpect(content().string(containsString("新增文章")));
-    }
-
-    @Test
-    void newPostFormRenders() throws Exception {
-        mockMvc.perform(get("/posts/new"))
-            .andExpect(status().isOk())
-            .andExpect(view().name("post-form"))
-            .andExpect(content().string(containsString("name=\"title\"")))
-            .andExpect(content().string(containsString("name=\"summary\"")))
-            .andExpect(content().string(containsString("name=\"content\"")))
-            .andExpect(content().string(containsString("新增文章")));
-    }
-
-    @Test
-    void createPostSavesAndRedirectsToDetail() throws Exception {
-        Post savedPost = org.mockito.Mockito.mock(Post.class);
-        when(savedPost.getId()).thenReturn(42L);
-        when(postRepository.save(any(Post.class))).thenReturn(savedPost);
-
-        mockMvc.perform(post("/posts")
-                .param("title", "测试标题")
-                .param("summary", "测试摘要")
-                .param("content", "测试正文"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/posts/42"));
-
-        ArgumentCaptor<Post> captor = ArgumentCaptor.forClass(Post.class);
-        verify(postRepository).save(captor.capture());
-        Post submitted = captor.getValue();
-        org.junit.jupiter.api.Assertions.assertEquals("测试标题", submitted.getTitle());
-        org.junit.jupiter.api.Assertions.assertEquals("测试摘要", submitted.getSummary());
-        org.junit.jupiter.api.Assertions.assertEquals("测试正文", submitted.getContent());
+            .andExpect(content().string(containsString("/admin/posts")))
+            .andExpect(content().string(containsString("后台管理")));
     }
 
     @Test

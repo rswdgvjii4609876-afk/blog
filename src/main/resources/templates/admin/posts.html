@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>后台文章管理</title>
+</head>
+<body>
+    <header>
+        <a th:href="@{/}">返回博客首页</a>
+    </header>
+
+    <main>
+        <h1>后台文章管理</h1>
+
+        <p><a th:href="@{/admin/posts/new}">发布新文章</a></p>
+
+        <div th:if="${hasPosts}">
+            <ul>
+                <li th:each="post : ${posts}">
+                    <span th:text="${post.id}">0</span>
+                    <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">标题</a>
+                    <span th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
+                    <a th:href="@{/posts/{id}(id=${post.id})}">查看</a>
+                </li>
+            </ul>
+        </div>
+
+        <div th:unless="${hasPosts}">
+            <p>暂无文章，先发布第一篇吧。</p>
+        </div>
+    </main>
+</body>
+</html>
