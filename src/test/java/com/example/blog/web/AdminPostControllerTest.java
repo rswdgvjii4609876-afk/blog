@@ -65,6 +65,7 @@ class AdminPostControllerTest {
         mockMvc.perform(get("/admin/posts/new"))
             .andExpect(status().isOk())
             .andExpect(view().name("admin/post-form"))
+            .andExpect(model().attributeExists("postForm"))
             .andExpect(content().string(containsString("name=\"title\"")))
             .andExpect(content().string(containsString("name=\"summary\"")))
             .andExpect(content().string(containsString("name=\"content\"")))
@@ -100,7 +101,8 @@ class AdminPostControllerTest {
         mockMvc.perform(get("/admin/posts/42/edit"))
             .andExpect(status().isOk())
             .andExpect(view().name("admin/post-form"))
-            .andExpect(model().attributeExists("post"))
+            .andExpect(model().attributeExists("postForm"))
+            .andExpect(model().attribute("postId", 42L))
             .andExpect(content().string(containsString("原始标题")))
             .andExpect(content().string(containsString("原始摘要")))
             .andExpect(content().string(containsString("原始正文")))
@@ -166,5 +168,84 @@ class AdminPostControllerTest {
             .andExpect(status().isNotFound());
 
         verify(postRepository, never()).delete(any(Post.class));
+    }
+
+    @Test
+    void createPostRejectsBlankTitle() throws Exception {
+        mockMvc.perform(post("/admin/posts")
+                .param("title", "")
+                .param("summary", "正常摘要")
+                .param("content", "正常正文"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/post-form"))
+            .andExpect(content().string(containsString("标题不能为空")));
+
+        verify(postRepository, never()).save(any(Post.class));
+    }
+
+    @Test
+    void createPostRejectsBlankSummary() throws Exception {
+        mockMvc.perform(post("/admin/posts")
+                .param("title", "正常标题")
+                .param("summary", "")
+                .param("content", "正常正文"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/post-form"))
+            .andExpect(content().string(containsString("摘要不能为空")));
+
+        verify(postRepository, never()).save(any(Post.class));
+    }
+
+    @Test
+    void createPostRejectsBlankContent() throws Exception {
+        mockMvc.perform(post("/admin/posts")
+                .param("title", "正常标题")
+                .param("summary", "正常摘要")
+                .param("content", ""))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/post-form"))
+            .andExpect(content().string(containsString("正文不能为空")));
+
+        verify(postRepository, never()).save(any(Post.class));
+    }
+
+    @Test
+    void createPostRejectsTitleLongerThan100Characters() throws Exception {
+        mockMvc.perform(post("/admin/posts")
+                .param("title", "a".repeat(101))
+                .param("summary", "正常摘要")
+                .param("content", "正常正文"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/post-form"))
+            .andExpect(content().string(containsString("标题不能超过100个字符")));
+
+        verify(postRepository, never()).save(any(Post.class));
+    }
+
+    @Test
+    void createPostRejectsSummaryLongerThan300Characters() throws Exception {
+        mockMvc.perform(post("/admin/posts")
+                .param("title", "正常标题")
+                .param("summary", "a".repeat(301))
+                .param("content", "正常正文"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/post-form"))
+            .andExpect(content().string(containsString("摘要不能超过300个字符")));
+
+        verify(postRepository, never()).save(any(Post.class));
+    }
+
+    @Test
+    void updatePostRejectsInvalidInputAndKeepsEditFormAction() throws Exception {
+        mockMvc.perform(post("/admin/posts/42")
+                .param("title", "")
+                .param("summary", "正常摘要")
+                .param("content", "正常正文"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/post-form"))
+            .andExpect(content().string(containsString("标题不能为空")))
+            .andExpect(content().string(containsString("action=\"/admin/posts/42\"")));
+
+        verify(postRepository, never()).save(any(Post.class));
     }
 }

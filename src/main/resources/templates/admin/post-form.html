@@ -2,7 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${post == null ? '发布新文章' : '编辑文章'}">发布新文章</title>
+    <title th:text="${postId == null ? '发布新文章' : '编辑文章'}">发布新文章</title>
 </head>
 <body>
     <header>
@@ -12,22 +12,25 @@
     </header>
 
     <main>
-        <h1 th:text="${post == null ? '发布新文章' : '编辑文章'}">发布新文章</h1>
+        <h1 th:text="${postId == null ? '发布新文章' : '编辑文章'}">发布新文章</h1>
 
-        <form method="post" th:action="${post == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
+        <form method="post" th:object="${postForm}" th:action="${postId == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
             <p>
                 <label for="title">标题</label><br>
-                <input id="title" name="title" type="text" th:value="${post != null ? post.title : ''}">
+                <input id="title" type="text" th:field="*{title}">
+                <span th:if="${#fields.hasErrors('title')}" th:errors="*{title}">标题错误</span>
             </p>
 
             <p>
                 <label for="summary">摘要</label><br>
-                <textarea id="summary" name="summary" rows="4" cols="60" th:text="${post != null ? post.summary : ''}"></textarea>
+                <textarea id="summary" rows="4" cols="60" th:field="*{summary}"></textarea>
+                <span th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}">摘要错误</span>
             </p>
 
             <p>
                 <label for="content">正文</label><br>
-                <textarea id="content" name="content" rows="10" cols="80" th:text="${post != null ? post.content : ''}"></textarea>
+                <textarea id="content" rows="10" cols="80" th:field="*{content}"></textarea>
+                <span th:if="${#fields.hasErrors('content')}" th:errors="*{content}">正文错误</span>
             </p>
 
             <button type="submit" th:text="${post == null ? '发布文章' : '保存修改'}">发布文章</button>
