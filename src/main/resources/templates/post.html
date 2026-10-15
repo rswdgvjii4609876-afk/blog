@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${post.title}">文章详情</title>
+</head>
+<body>
+    <header>
+        <a th:href="@{/}">返回首页</a>
+    </header>
+
+    <main>
+        <article>
+            <h1 th:text="${post.title}">文章标题</h1>
+            <p th:text="${post.summary}">文章摘要</p>
+            <p th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">创建时间</p>
+            <div th:text="${post.content}">文章正文</div>
+        </article>
+    </main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: blog
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+
+server:
+  port: 8080
