@@ -2,20 +2,42 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${post.title}">文章详情</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${post.title} + ' · Blog'">文章详情 · Blog</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-    <header>
-        <a th:href="@{/}">返回首页</a>
+    <header class="site-header">
+        <nav class="site-nav" aria-label="主导航">
+            <a class="brand" th:href="@{/}">Blog</a>
+            <div class="nav-links">
+                <a class="nav-link" th:href="@{/}">首页</a>
+                <a class="nav-link" th:href="@{/admin/posts}">后台管理</a>
+            </div>
+        </nav>
     </header>
 
-    <main>
-        <article>
-            <h1 th:text="${post.title}">文章标题</h1>
-            <p th:text="${post.summary}">文章摘要</p>
-            <p th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">创建时间</p>
-            <div th:text="${post.content}">文章正文</div>
+    <main class="reading-shell">
+        <a class="back-link" th:href="@{/}">
+            <span aria-hidden="true">←</span> 返回文章列表
+        </a>
+
+        <article class="post-article">
+            <header class="post-heading">
+                <h1 class="post-title" th:text="${post.title}">文章标题</h1>
+                <p class="post-summary" th:text="${post.summary}">文章摘要</p>
+                <p class="post-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">创建时间</p>
+            </header>
+
+            <div class="post-divider" aria-hidden="true"></div>
+            <div class="post-content" th:text="${post.content}">文章正文</div>
         </article>
+
+        <footer class="post-footer">
+            <a class="back-link" th:href="@{/}">
+                <span aria-hidden="true">←</span> 返回文章列表
+            </a>
+        </footer>
     </main>
 </body>
 </html>

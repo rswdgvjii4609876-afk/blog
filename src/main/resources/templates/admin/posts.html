@@ -2,36 +2,62 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>后台文章管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>文章管理 · Blog</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-    <header>
-        <a th:href="@{/}">返回博客首页</a>
+    <header class="site-header">
+        <nav class="site-nav" aria-label="后台导航">
+            <a class="brand" th:href="@{/}">Blog</a>
+            <span class="nav-context">后台管理</span>
+            <div class="nav-links">
+                <a class="nav-link" th:href="@{/}">返回博客</a>
+            </div>
+        </nav>
     </header>
 
-    <main>
-        <h1>后台文章管理</h1>
+    <main class="site-container admin-page">
+        <section class="admin-heading" aria-labelledby="admin-title">
+            <div class="page-heading">
+                <p class="eyebrow">后台文章管理</p>
+                <h1 id="admin-title">文章管理</h1>
+                <p class="page-description">管理博客中的文章内容</p>
+            </div>
+            <a class="button button-primary" th:href="@{/admin/posts/new}">
+                <span aria-hidden="true">+</span> 发布文章
+            </a>
+        </section>
 
-        <p><a th:href="@{/admin/posts/new}">发布新文章</a></p>
-
-        <div th:if="${hasPosts}">
-            <ul>
-                <li th:each="post : ${posts}">
-                    <span th:text="${post.id}">0</span>
-                    <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">标题</a>
-                    <span th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
-                    <a th:href="@{/posts/{id}(id=${post.id})}">查看</a>
-                    <a th:href="@{/admin/posts/{id}/edit(id=${post.id})}">编辑</a>
-                    <form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}">
-                        <button type="submit">删除</button>
-                    </form>
+        <section th:if="${hasPosts}" class="admin-list" aria-label="文章列表">
+            <ul class="admin-list-items">
+                <li th:each="post : ${posts}" class="admin-list-item">
+                    <article class="admin-item">
+                        <div class="admin-item-copy">
+                            <h2 class="admin-item-title" th:text="${post.title}">标题</h2>
+                            <p class="admin-item-summary" th:text="${post.summary}">摘要</p>
+                            <p class="admin-item-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</p>
+                        </div>
+                        <nav class="admin-actions" aria-label="文章操作">
+                            <a class="action-link" th:href="@{/posts/{id}(id=${post.id})}">查看</a>
+                            <a class="button button-secondary" th:href="@{/admin/posts/{id}/edit(id=${post.id})}">编辑</a>
+                            <form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}">
+                                <button class="button button-danger" type="submit">删除</button>
+                            </form>
+                        </nav>
+                    </article>
                 </li>
             </ul>
-        </div>
+        </section>
 
-        <div th:unless="${hasPosts}">
-            <p>暂无文章，先发布第一篇吧。</p>
-        </div>
+        <section th:unless="${hasPosts}" class="empty-state admin-empty" aria-labelledby="empty-title">
+            <h2 id="empty-title">暂无文章</h2>
+            <p>发布第一篇文章后，它会显示在这里。</p>
+        </section>
     </main>
+
+    <footer class="site-footer">
+        <div class="site-container footer-inner">Blog · 后台管理</div>
+    </footer>
 </body>
 </html>

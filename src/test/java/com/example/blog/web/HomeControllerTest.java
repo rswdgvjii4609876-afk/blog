@@ -43,10 +43,10 @@ class HomeControllerTest {
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
             .andExpect(view().name("index"))
-            .andExpect(content().string(containsString("📝 我的博客")))
+            .andExpect(content().string(containsString("Blog")))
             .andExpect(content().string(containsString("你好，世界")))
             .andExpect(content().string(containsString("第二篇")))
-            .andExpect(content().string(containsString("欢迎来到我的个人博客")));
+            .andExpect(content().string(containsString("最新文章")));
     }
 
     @Test
@@ -56,7 +56,7 @@ class HomeControllerTest {
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
             .andExpect(view().name("index"))
-            .andExpect(content().string(containsString("📭")))
+            .andExpect(content().string(containsString("暂时还没有文章")))
             .andExpect(content().string(containsString("还没有任何文章")));
     }
 

@@ -2,39 +2,58 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${postId == null ? '发布新文章' : '编辑文章'}">发布新文章</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${postId == null ? '发布文章 · Blog' : '编辑文章 · Blog'}">发布文章 · Blog</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-    <header>
-        <a th:href="@{/admin/posts}">返回后台文章列表</a>
-        <span> | </span>
-        <a th:href="@{/}">返回博客首页</a>
+    <header class="site-header">
+        <nav class="site-nav" aria-label="后台导航">
+            <a class="brand" th:href="@{/}">Blog</a>
+            <span class="nav-context">后台管理</span>
+            <div class="nav-links">
+                <a class="nav-link" th:href="@{/admin/posts}">文章列表</a>
+                <a class="nav-link" th:href="@{/}">返回博客</a>
+            </div>
+        </nav>
     </header>
 
-    <main>
-        <h1 th:text="${postId == null ? '发布新文章' : '编辑文章'}">发布新文章</h1>
+    <main class="site-container form-page">
+        <section class="form-panel" aria-labelledby="form-title">
+            <header class="form-heading">
+                <h1 id="form-title" th:text="${postId == null ? '发布文章' : '编辑文章'}">发布文章</h1>
+                <p class="page-description" th:text="${postId == null ? '创建一篇新的博客文章' : '修改文章内容并保存'}">创建一篇新的博客文章</p>
+            </header>
 
-        <form method="post" th:object="${postForm}" th:action="${postId == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
-            <p>
-                <label for="title">标题</label><br>
-                <input id="title" type="text" th:field="*{title}">
-                <span th:if="${#fields.hasErrors('title')}" th:errors="*{title}">标题错误</span>
-            </p>
+            <form class="post-form" method="post" th:object="${postForm}" th:action="${postId == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
+                <div class="form-field">
+                    <label for="title">标题</label>
+                    <input id="title" type="text" th:field="*{title}" th:attr="aria-describedby=${#fields.hasErrors('title') ? 'title-error' : null}">
+                    <span id="title-error" class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">标题错误</span>
+                </div>
 
-            <p>
-                <label for="summary">摘要</label><br>
-                <textarea id="summary" rows="4" cols="60" th:field="*{summary}"></textarea>
-                <span th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}">摘要错误</span>
-            </p>
+                <div class="form-field">
+                    <label for="summary">摘要</label>
+                    <textarea id="summary" rows="4" th:field="*{summary}" th:attr="aria-describedby=${#fields.hasErrors('summary') ? 'summary-error' : null}"></textarea>
+                    <span id="summary-error" class="field-error" th:if="${#fields.hasErrors('summary')}" th:errors="*{summary}">摘要错误</span>
+                </div>
 
-            <p>
-                <label for="content">正文</label><br>
-                <textarea id="content" rows="10" cols="80" th:field="*{content}"></textarea>
-                <span th:if="${#fields.hasErrors('content')}" th:errors="*{content}">正文错误</span>
-            </p>
+                <div class="form-field">
+                    <label for="content">正文</label>
+                    <textarea id="content" class="content-input" rows="11" th:field="*{content}" th:attr="aria-describedby=${#fields.hasErrors('content') ? 'content-error' : null}"></textarea>
+                    <span id="content-error" class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}">正文错误</span>
+                </div>
 
-            <button type="submit" th:text="${postId == null ? '发布文章' : '保存修改'}">发布文章</button>
-        </form>
+                <div class="form-actions">
+                    <button class="button button-primary" type="submit" th:text="${postId == null ? '发布文章' : '保存修改'}">发布文章</button>
+                    <a class="button button-secondary" th:href="@{/admin/posts}">取消</a>
+                </div>
+            </form>
+        </section>
     </main>
+
+    <footer class="site-footer">
+        <div class="site-container footer-inner">Blog · 后台管理</div>
+    </footer>
 </body>
 </html>
