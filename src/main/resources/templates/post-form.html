@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>新增文章</title>
+</head>
+<body>
+    <header>
+        <a th:href="@{/}">返回首页</a>
+    </header>
+
+    <main>
+        <h1>新增文章</h1>
+
+        <form method="post" action="/posts">
+            <p>
+                <label for="title">标题</label><br>
+                <input id="title" name="title" type="text">
+            </p>
+
+            <p>
+                <label for="summary">摘要</label><br>
+                <textarea id="summary" name="summary" rows="4" cols="60"></textarea>
+            </p>
+
+            <p>
+                <label for="content">正文</label><br>
+                <textarea id="content" name="content" rows="10" cols="80"></textarea>
+            </p>
+
+            <button type="submit">提交</button>
+        </form>
+    </main>
+</body>
+</html>
