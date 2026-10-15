@@ -33,7 +33,7 @@
                 <span th:if="${#fields.hasErrors('content')}" th:errors="*{content}">正文错误</span>
             </p>
 
-            <button type="submit" th:text="${post == null ? '发布文章' : '保存修改'}">发布文章</button>
+            <button type="submit" th:text="${postId == null ? '发布文章' : '保存修改'}">发布文章</button>
         </form>
     </main>
 </body>

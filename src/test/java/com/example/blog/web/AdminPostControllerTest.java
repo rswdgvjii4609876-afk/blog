@@ -66,6 +66,7 @@ class AdminPostControllerTest {
             .andExpect(status().isOk())
             .andExpect(view().name("admin/post-form"))
             .andExpect(model().attributeExists("postForm"))
+            .andExpect(content().string(containsString("发布文章")))
             .andExpect(content().string(containsString("name=\"title\"")))
             .andExpect(content().string(containsString("name=\"summary\"")))
             .andExpect(content().string(containsString("name=\"content\"")))
@@ -106,6 +107,7 @@ class AdminPostControllerTest {
             .andExpect(content().string(containsString("原始标题")))
             .andExpect(content().string(containsString("原始摘要")))
             .andExpect(content().string(containsString("原始正文")))
+            .andExpect(content().string(containsString("保存修改")))
             .andExpect(content().string(containsString("/admin/posts/42")));
     }
 
