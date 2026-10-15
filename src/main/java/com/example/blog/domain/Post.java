@@ -43,6 +43,12 @@ public class Post {
         this.content = content;
     }
 
+    public void update(String title, String summary, String content) {
+        this.title = title;
+        this.summary = summary;
+        this.content = content;
+    }
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) {

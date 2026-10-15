@@ -3,11 +3,14 @@ package com.example.blog.web;
 import com.example.blog.domain.Post;
 import com.example.blog.repository.PostRepository;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 public class AdminPostController {
@@ -31,6 +34,15 @@ public class AdminPostController {
         return "admin/post-form";
     }
 
+    @GetMapping("/admin/posts/{id}/edit")
+    public String editPostForm(@PathVariable Long id, Model model) {
+        Post post = postRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        model.addAttribute("post", post);
+        model.addAttribute("postId", id);
+        return "admin/post-form";
+    }
+
     @PostMapping("/admin/posts")
     public String createPost(
         @RequestParam String title,
@@ -40,5 +52,27 @@ public class AdminPostController {
         Post post = new Post(title, summary, content);
         Post saved = postRepository.save(post);
         return "redirect:/posts/" + saved.getId();
+    }
+
+    @PostMapping("/admin/posts/{id}")
+    public String updatePost(
+        @PathVariable Long id,
+        @RequestParam String title,
+        @RequestParam String summary,
+        @RequestParam String content
+    ) {
+        Post post = postRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        post.update(title, summary, content);
+        postRepository.save(post);
+        return "redirect:/posts/" + id;
+    }
+
+    @PostMapping("/admin/posts/{id}/delete")
+    public String deletePost(@PathVariable Long id) {
+        Post post = postRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        postRepository.delete(post);
+        return "redirect:/admin/posts";
     }
 }

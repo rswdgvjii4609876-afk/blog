@@ -2,7 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>发布新文章</title>
+    <title th:text="${post == null ? '发布新文章' : '编辑文章'}">发布新文章</title>
 </head>
 <body>
     <header>
@@ -12,25 +12,25 @@
     </header>
 
     <main>
-        <h1>发布新文章</h1>
+        <h1 th:text="${post == null ? '发布新文章' : '编辑文章'}">发布新文章</h1>
 
-        <form method="post" action="/admin/posts">
+        <form method="post" th:action="${post == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
             <p>
                 <label for="title">标题</label><br>
-                <input id="title" name="title" type="text">
+                <input id="title" name="title" type="text" th:value="${post != null ? post.title : ''}">
             </p>
 
             <p>
                 <label for="summary">摘要</label><br>
-                <textarea id="summary" name="summary" rows="4" cols="60"></textarea>
+                <textarea id="summary" name="summary" rows="4" cols="60" th:text="${post != null ? post.summary : ''}"></textarea>
             </p>
 
             <p>
                 <label for="content">正文</label><br>
-                <textarea id="content" name="content" rows="10" cols="80"></textarea>
+                <textarea id="content" name="content" rows="10" cols="80" th:text="${post != null ? post.content : ''}"></textarea>
             </p>
 
-            <button type="submit">发布</button>
+            <button type="submit" th:text="${post == null ? '发布文章' : '保存修改'}">发布文章</button>
         </form>
     </main>
 </body>

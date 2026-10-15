@@ -21,6 +21,10 @@
                     <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">标题</a>
                     <span th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</span>
                     <a th:href="@{/posts/{id}(id=${post.id})}">查看</a>
+                    <a th:href="@{/admin/posts/{id}/edit(id=${post.id})}">编辑</a>
+                    <form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}">
+                        <button type="submit">删除</button>
+                    </form>
                 </li>
             </ul>
         </div>
