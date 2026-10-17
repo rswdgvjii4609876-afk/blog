@@ -29,6 +29,15 @@
             </a>
         </section>
 
+        <form class="search-form admin-search" action="/admin/posts" th:action="@{/admin/posts}" method="get" role="search">
+            <label class="search-label" for="admin-post-search">搜索全部文章</label>
+            <div class="search-controls">
+                <input id="admin-post-search" type="search" name="q" placeholder="搜索全部文章的标题或摘要" maxlength="100" th:value="${q}">
+                <button class="button button-primary" type="submit">搜索</button>
+                <a class="action-link" th:if="${!q.isEmpty()}" th:href="@{/admin/posts}">清除搜索</a>
+            </div>
+        </form>
+
         <section th:if="${postPage.hasContent()}" class="admin-list" aria-label="文章列表">
             <ul class="admin-list-items">
                 <li th:each="post : ${posts}" class="admin-list-item">
@@ -54,16 +63,16 @@
         </section>
 
         <nav class="pagination" th:if="${postPage.totalPages > 1}" aria-label="后台文章分页">
-            <a th:if="${postPage.hasPrevious()}" th:href="@{/admin/posts(page=${postPage.number - 1})}" rel="prev">上一页</a>
+            <a th:if="${postPage.hasPrevious()}" th:href="${q.isEmpty()} ? @{/admin/posts(page=${postPage.number - 1})} : @{/admin/posts(q=${q},page=${postPage.number - 1})}" rel="prev">上一页</a>
             <span class="pagination-disabled" th:unless="${postPage.hasPrevious()}" aria-disabled="true">上一页</span>
             <span class="pagination-summary" th:text="|第 ${postPage.number + 1} / ${postPage.totalPages} 页|">第 1 / 2 页</span>
-            <a th:if="${postPage.hasNext()}" th:href="@{/admin/posts(page=${postPage.number + 1})}" rel="next">下一页</a>
+            <a th:if="${postPage.hasNext()}" th:href="${q.isEmpty()} ? @{/admin/posts(page=${postPage.number + 1})} : @{/admin/posts(q=${q},page=${postPage.number + 1})}" rel="next">下一页</a>
             <span class="pagination-disabled" th:unless="${postPage.hasNext()}" aria-disabled="true">下一页</span>
         </nav>
 
         <section th:unless="${postPage.hasContent()}" class="empty-state admin-empty" aria-labelledby="empty-title">
-            <h2 id="empty-title">暂无文章</h2>
-            <p>新建文章后，可以在这里管理草稿和已发布文章。</p>
+            <h2 id="empty-title" th:text="${q.isEmpty()} ? '暂无文章' : |没有找到与“${q}”匹配的文章|">暂无文章</h2>
+            <p th:text="${q.isEmpty()} ? '新建文章后，可以在这里管理草稿和已发布文章。' : '试试其他关键词，或清除搜索查看全部文章。'">新建文章后，可以在这里管理草稿和已发布文章。</p>
         </section>
     </main>
 

@@ -176,6 +176,41 @@ textarea {
     font-size: 12px;
 }
 
+.search-form {
+    max-width: 760px;
+    margin: 0 0 28px;
+}
+
+.search-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--color-secondary);
+    font-size: 14px;
+}
+
+.search-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-controls input {
+    flex: 1 1 240px;
+    min-width: 0;
+    min-height: 42px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 9px 14px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    line-height: 1.25;
+}
+
+.admin-search {
+    max-width: 640px;
+}
+
 .pagination {
     display: flex;
     flex-wrap: wrap;
@@ -270,6 +305,7 @@ textarea {
     font-size: 21px;
     font-weight: 600;
     letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
 }
 
 .empty-state p {

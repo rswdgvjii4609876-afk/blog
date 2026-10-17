@@ -29,19 +29,30 @@ public class AdminPostController {
     }
 
     @GetMapping("/admin/posts")
-    public String listPosts(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
+    public String listPosts(
+        @RequestParam(name = "q", defaultValue = "") String q,
+        @RequestParam(name = "page", defaultValue = "0") int page,
+        Model model
+    ) {
+        String keyword = q.strip();
+        if (keyword.length() > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         // JPA 的分页偏移使用 int。
         if (page < 0 || (long) page * PAGE_SIZE > Integer.MAX_VALUE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         var pageable = PageRequest.of(page, PAGE_SIZE,
             Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
-        var postPage = postRepository.findAll(pageable);
+        var postPage = keyword.isEmpty()
+            ? postRepository.findAll(pageable)
+            : postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase(keyword, keyword, pageable);
         if (page > 0 && page >= postPage.getTotalPages()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         model.addAttribute("postPage", postPage);
         model.addAttribute("posts", postPage.getContent());
+        model.addAttribute("q", keyword);
         return "admin/posts";
     }
 

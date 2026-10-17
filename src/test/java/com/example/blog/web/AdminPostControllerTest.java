@@ -19,9 +19,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,6 +68,9 @@ class AdminPostControllerTest {
             .andExpect(status().isOk())
             .andExpect(view().name("admin/posts"))
             .andExpect(content().string(containsString("后台文章管理")))
+            .andExpect(model().attribute("q", ""))
+            .andExpect(content().string(containsString("action=\"/admin/posts\" method=\"get\"")))
+            .andExpect(content().string(containsString("type=\"search\" name=\"q\"")))
             .andExpect(content().string(containsString("后台标题 1")))
             .andExpect(content().string(containsString("后台标题 2")))
             .andExpect(content().string(containsString("已发布")))
@@ -183,6 +188,158 @@ class AdminPostControllerTest {
         mockMvc.perform(get("/admin/posts").param("page", "999"))
             .andExpect(status().isNotFound());
         verify(postRepository).findAll(pageable);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " \t ", "\u2003"})
+    void blankSearchUsesNormalAdminPaginationWithoutEmptyKeywordLinks(String q) throws Exception {
+        var pageable = PageRequest.of(1, 10, POST_SORT);
+        var posts = List.of(new Post("普通草稿", "摘要", "正文", PostStatus.DRAFT));
+        when(postRepository.findAll(pageable)).thenReturn(new PageImpl<>(posts, pageable, 11));
+
+        mockMvc.perform(get("/admin/posts").param("q", q).param("page", "1"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("q", ""))
+            .andExpect(content().string(containsString("href=\"/admin/posts?page=0\"")))
+            .andExpect(content().string(not(containsString("?q="))))
+            .andExpect(content().string(not(containsString("清除搜索"))));
+
+        verify(postRepository).findAll(pageable);
+        verify(postRepository, never()).findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase(
+            any(String.class), any(String.class), any(Pageable.class));
+    }
+
+    @Test
+    void adminSearchStripsKeywordAndPreservesBothStatusesAndTheirActions() throws Exception {
+        var pageable = PageRequest.of(0, 10, POST_SORT);
+        var posts = IntStream.rangeClosed(1, 10)
+            .mapToObj(i -> new Post("Spring 文章 " + i, "摘要", "正文",
+                i % 2 == 0 ? PostStatus.DRAFT : PostStatus.PUBLISHED))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, 11);
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("Spring", "Spring", pageable))
+            .thenReturn(postPage);
+
+        var result = mockMvc.perform(get("/admin/posts").param("q", "\u2003 Spring \t"))
+            .andExpect(status().isOk())
+            .andExpect(view().name("admin/posts"))
+            .andExpect(model().attribute("q", "Spring"))
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("value=\"Spring\"")))
+            .andExpect(content().string(containsString("清除搜索")))
+            .andExpect(content().string(containsString("共 <span>11</span> 篇")))
+            .andExpect(content().string(containsString("href=\"/admin/posts?q=Spring&amp;page=1\"")))
+            .andExpect(content().string(not(containsString("name=\"page\""))))
+            .andReturn();
+
+        String[] articles = result.getResponse().getContentAsString(StandardCharsets.UTF_8)
+            .split("<article class=\"admin-item\">");
+        assertThat(articles).hasSize(11);
+        assertThat(articles[1].split("</article>")[0]).contains("已发布", "href=\"/posts/", "编辑", "删除");
+        assertThat(articles[2].split("</article>")[0]).contains("草稿", "编辑", "删除")
+            .doesNotContain("href=\"/posts/", "查看");
+        verify(postRepository).findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("Spring", "Spring", pageable);
+        verify(postRepository, never()).findAll(any(Pageable.class));
+        verify(postRepository, never()).findByStatus(any(PostStatus.class), any(Pageable.class));
+    }
+
+    @Test
+    void adminSearchSecondPageKeepsKeywordAndFixedPageSizeAndSort() throws Exception {
+        var pageable = PageRequest.of(1, 10, POST_SORT);
+        var posts = IntStream.rangeClosed(1, 10)
+            .mapToObj(i -> new Post("搜索第二页 " + i, "摘要", "正文", PostStatus.DRAFT))
+            .toList();
+        var postPage = new PageImpl<>(posts, pageable, 21);
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("spring", "spring", pageable))
+            .thenReturn(postPage);
+
+        mockMvc.perform(get("/admin/posts").param("q", "spring").param("page", "1")
+                .param("size", "1").param("sort", "id,asc"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("posts", posts))
+            .andExpect(model().attribute("postPage", postPage))
+            .andExpect(content().string(containsString("共 <span>21</span> 篇")))
+            .andExpect(content().string(containsString("第 2 / 3 页")))
+            .andExpect(content().string(containsString("href=\"/admin/posts?q=spring&amp;page=0\"")))
+            .andExpect(content().string(containsString("href=\"/admin/posts?q=spring&amp;page=2\"")))
+            .andExpect(content().string(not(containsString("name=\"page\""))));
+
+        verify(postRepository).findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("spring", "spring", pageable);
+    }
+
+    @Test
+    void adminSearchEmptyFirstPageIsOkAndPagesBeyondFilteredResultsAreNotFound() throws Exception {
+        var first = PageRequest.of(0, 10, POST_SORT);
+        var second = PageRequest.of(1, 10, POST_SORT);
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("missing", "missing", first))
+            .thenReturn(Page.empty(first));
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("missing", "missing", second))
+            .thenReturn(Page.empty(second));
+
+        mockMvc.perform(get("/admin/posts").param("q", "missing"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("q", "missing"))
+            .andExpect(content().string(containsString("没有找到与“missing”匹配的文章")))
+            .andExpect(content().string(containsString("试试其他关键词，或清除搜索查看全部文章。")))
+            .andExpect(content().string(containsString("共 <span>0</span> 篇")))
+            .andExpect(content().string(not(containsString("暂无文章"))))
+            .andExpect(content().string(not(containsString("class=\"pagination\""))));
+        mockMvc.perform(get("/admin/posts").param("q", "missing").param("page", "1"))
+            .andExpect(status().isNotFound());
+
+        var beyond = PageRequest.of(5, 10, POST_SORT);
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase("spring", "spring", beyond))
+            .thenReturn(new PageImpl<>(List.of(), beyond, 1));
+        mockMvc.perform(get("/admin/posts").param("q", "spring").param("page", "5"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void adminSearchValidatesKeywordLengthAfterStripping() throws Exception {
+        mockMvc.perform(get("/admin/posts").param("q", "a".repeat(101)))
+            .andExpect(status().isBadRequest());
+        verifyNoInteractions(postRepository);
+
+        String keyword = "a".repeat(100);
+        var pageable = PageRequest.of(0, 10, POST_SORT);
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase(keyword, keyword, pageable))
+            .thenReturn(Page.empty(pageable));
+        mockMvc.perform(get("/admin/posts").param("q", "\u2003 " + keyword + " \t"))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("q", keyword));
+        verify(postRepository).findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase(keyword, keyword, pageable);
+    }
+
+    @Test
+    void adminSearchEscapesHtmlAndPreservesSpecialCharactersInPagination() throws Exception {
+        String keyword = "\"><script>alert(1)</script>&中文%_\\+";
+        var pageable = PageRequest.of(0, 10, POST_SORT);
+        var posts = IntStream.rangeClosed(1, 10)
+            .mapToObj(i -> new Post("匹配文章 " + i, "摘要", "正文", PostStatus.DRAFT))
+            .toList();
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase(keyword, keyword, pageable))
+            .thenReturn(new PageImpl<>(posts, pageable, 11));
+
+        var result = mockMvc.perform(get("/admin/posts").param("q", keyword))
+            .andExpect(status().isOk())
+            .andExpect(model().attribute("q", keyword))
+            .andExpect(content().string(containsString("value=\"&quot;&gt;&lt;script&gt;")))
+            .andExpect(content().string(not(containsString("<script>"))))
+            .andReturn();
+        var nextLink = Pattern.compile("href=\"([^\"]+)\" rel=\"next\"")
+            .matcher(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        assertThat(nextLink.find()).isTrue();
+        assertThat(URLDecoder.decode(nextLink.group(1).replace("&amp;", "&"), StandardCharsets.UTF_8))
+            .isEqualTo("/admin/posts?q=" + keyword + "&page=1");
+
+        when(postRepository.findByTitleContainingIgnoreCaseOrSummaryContainingIgnoreCase(keyword, keyword, pageable))
+            .thenReturn(Page.empty(pageable));
+        mockMvc.perform(get("/admin/posts").param("q", keyword))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("没有找到与“")))
+            .andExpect(content().string(containsString("&lt;script&gt;")))
+            .andExpect(content().string(not(containsString("<script>"))));
     }
 
     @Test

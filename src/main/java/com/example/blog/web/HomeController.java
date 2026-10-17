@@ -28,19 +28,30 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    public String index(@RequestParam(name = "page", defaultValue = "0") int page, Model model) {
+    public String index(
+        @RequestParam(name = "q", defaultValue = "") String q,
+        @RequestParam(name = "page", defaultValue = "0") int page,
+        Model model
+    ) {
+        String keyword = q.strip();
+        if (keyword.length() > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         // JPA 的分页偏移使用 int。
         if (page < 0 || (long) page * PAGE_SIZE > Integer.MAX_VALUE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
         var pageable = PageRequest.of(page, PAGE_SIZE,
             Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
-        var postPage = postRepository.findByStatus(PostStatus.PUBLISHED, pageable);
+        var postPage = keyword.isEmpty()
+            ? postRepository.findByStatus(PostStatus.PUBLISHED, pageable)
+            : postRepository.searchByStatus(PostStatus.PUBLISHED, keyword, pageable);
         if (page > 0 && page >= postPage.getTotalPages()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         model.addAttribute("postPage", postPage);
         model.addAttribute("posts", postPage.getContent());
+        model.addAttribute("q", keyword);
         return "index";
     }
 
