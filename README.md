@@ -2,24 +2,27 @@
 
 这是一个基于 Spring Boot、Thymeleaf 和 Spring Data JPA 的个人博客项目，使用服务端模板渲染页面。
 
-当前支持公开文章列表和详情、草稿与已发布状态切换、首页与后台分页，以及后台文章创建、编辑、删除和表单校验。本地开发默认使用 H2；项目还包含 MySQL `prod` profile 配置骨架，尚未完成生产数据库验证。
+当前支持公开文章列表和详情、草稿与已发布状态切换、首页与后台分页和搜索，以及后台文章创建、编辑、删除和表单校验。本地开发默认使用 H2；项目还包含 MySQL `prod` profile 配置骨架，尚未完成生产数据库验证。
 
 ## 项目功能
 
 - 查看已发布文章列表和文章详情
+- 后台文章 CRUD：创建、列表展示、编辑和删除
 - 新建文章时可选择“保存草稿”（`DRAFT`）或“发布文章”（`PUBLISHED`）
 - 编辑时可在草稿与已发布之间切换，并同时保存内容和状态
 - 后台显示全部文章及“草稿 / 已发布”状态；草稿仍可编辑和删除，但没有公开“查看”入口
 - 首页按 5 篇/页展示已发布文章，后台按 10 篇/页展示全部文章
-- 校验标题、摘要和正文，并显示中文错误提示
+- 公开首页与后台均支持按标题（`title`）或摘要（`summary`）搜索，不搜索正文（`content`）
+- 公开搜索只包含 `PUBLISHED`，后台搜索包含 `DRAFT` 和 `PUBLISHED`
+- 使用 Bean Validation 校验标题、摘要和正文，并显示中文错误提示
 - 在 `dev` profile 下使用 H2，并初始化 3 篇 `PUBLISHED` 示例文章
-- 使用 Thymeleaf 服务端渲染页面
+- 使用 Thymeleaf 服务端渲染页面，支持响应式布局
 
 公开列表与详情的 Repository 查询条件都限制为 `PUBLISHED`。草稿不会出现在首页，直接访问草稿的 `/posts/{id}` 与访问不存在的文章一样返回 `404`。
 
 `createdAt` 表示文章创建时间，发布或撤回不会改变该字段；当前没有独立的发布时间字段。
 
-后台目前没有登录或权限管理。请仅在可信的本地开发环境中使用管理页面；公开部署前需要增加访问控制。
+当前考试要求不包含认证。后台目前没有登录认证或权限管理，请仅在可信的本地开发环境中使用管理页面；部署到公网前需要增加访问控制。
 
 ## 技术栈
 
@@ -52,7 +55,7 @@ src/main/resources
 
 src/test/java/com/example/blog
 ├── BlogApplicationTests.java
-├── repository   # Repository 状态过滤和分页测试
+├── repository   # Repository 状态过滤、分页和搜索测试
 └── web          # 公开页面和后台 Controller 测试
 ```
 
@@ -88,8 +91,12 @@ src/test/java/com/example/blog
 | 方法 | 路由 | 用途 |
 | --- | --- | --- |
 | GET | `/?page=0` | 显示已发布文章列表，每页 5 篇；`page` 可省略 |
+| GET | `/?q=keyword` | 搜索已发布文章的标题或摘要 |
+| GET | `/?q=keyword&page=1` | 显示公开搜索结果的第 2 页 |
 | GET | `/posts/{id}` | 显示已发布文章详情；草稿或不存在的文章返回 `404` |
 | GET | `/admin/posts?page=0` | 显示全部文章及状态，每页 10 篇；`page` 可省略 |
+| GET | `/admin/posts?q=keyword` | 搜索全部状态文章的标题或摘要 |
+| GET | `/admin/posts?q=keyword&page=1` | 显示后台搜索结果的第 2 页 |
 | GET | `/admin/posts/new` | 显示新建文章表单 |
 | GET | `/admin/posts/{id}/edit` | 显示文章编辑表单 |
 | POST | `/admin/posts` | 校验并创建草稿或已发布文章 |
@@ -97,6 +104,10 @@ src/test/java/com/example/blog
 | POST | `/admin/posts/{id}/delete` | 删除文章 |
 
 两个列表均按 `createdAt DESC, id DESC` 排序。URL 的 `page` 使用 0-based 页码，默认 `0`；界面使用 1-based 页码，例如 `page=0` 显示“第 1 / 2 页”。页大小与排序固定，不提供自定义参数。
+
+搜索在 Repository 层由数据库完成，公开搜索固定限制 `PostStatus.PUBLISHED`，查询条件为 `status = PUBLISHED AND (title match OR summary match)`；后台搜索包含全部状态。匹配忽略大小写，`%`、`_` 及查询转义字符均按普通搜索字符处理。
+
+搜索继续使用 `Page<Post>` 和 `Pageable`，保持公开每页 5 篇、后台每页 10 篇及上述排序。`totalElements` 表示当前搜索条件下的匹配数量，翻页链接保留 `q`。关键词去除首尾空白后为空时显示普通列表；超过 100 字符返回 `400`。无匹配结果时，第 0 页返回 `200` 并显示搜索空状态，正页码返回 `404`。
 
 负数、非整数或超出分页偏移范围的 `page` 返回 `400`；合法但超出实际总页数的页码返回 `404`。没有文章时，第 0 页仍正常显示空列表。总文章数统计符合查询条件的全部文章，翻页不会改变总数；公开列表不计入草稿。
 
@@ -111,14 +122,21 @@ src/test/java/com/example/blog
 当前功能阶段最终测试基线：
 
 ```text
-Tests run: 45
+Tests run: 67
 Failures: 0
 Errors: 0
 Skipped: 0
 BUILD SUCCESS
 ```
 
-该基线来自草稿发布工作流与分页功能提交前的最终测试，覆盖应用初始化、Repository 查询和公开 / 后台 Controller 行为。本次仅更新文档，没有重新运行 Maven 测试。
+该基线来自搜索功能完成后的最终自动测试，覆盖：
+
+- 应用上下文加载（context load）与示例文章初始化
+- Controller 的 CRUD、Bean Validation、`DRAFT` / `PUBLISHED` 状态转换及草稿公开隔离
+- 普通分页、页码边界和 Repository 状态过滤
+- 标题 / 摘要搜索、忽略大小写、搜索草稿隔离、匹配总数、搜索分页和 LIKE 特殊字符
+
+本次仅更新文档，没有重新运行 Maven 测试。
 
 ## 开发过程
 
@@ -132,8 +150,9 @@ BUILD SUCCESS
 6. `e89268a`：修复编辑表单模式显示
 7. `da3d71f feat: add draft and publish workflow`：增加草稿与已发布状态及公开查询隔离
 8. `c9b4e36 feat: add post pagination`：增加首页与后台文章分页
+9. `b8be2c7 feat: add post search`：增加公开与后台文章搜索
 
-这些提交保留了项目从基础页面到后台管理、草稿发布工作流和分页功能的开发过程。
+这些提交保留了项目从基础页面到后台管理、草稿发布工作流、分页和搜索功能的开发过程。
 
 ## 遇到的问题与解决方案
 
@@ -157,11 +176,17 @@ BUILD SUCCESS
 
 多篇文章可能具有相同的创建时间。仅按 `createdAt DESC` 排序时，这些文章之间没有确定的顺序，因此增加 `id DESC` 作为第二排序条件，保证相同创建时间下的分页排序稳定。
 
+### 6. 公开搜索的条件分组
+
+公开搜索如果写成 `(status AND title) OR summary`，草稿可能通过摘要条件进入公开结果。因此 Repository 查询显式使用 `status AND (title OR summary)`，并通过真实 H2 Repository 测试验证草稿隔离。搜索分页保留 `q`，LIKE 特殊字符按普通字符处理，这些行为也由测试覆盖。
+
 ## AI 使用与验证
 
 开发过程中使用 AI 辅助环境排查、代码建议、测试设计和 Bug 定位。验证方式包括 Maven tests（自动测试）、git diff（变更审查）、HTTP 检查和浏览器人工验收，并通过 git status 检查变更范围。
 
 草稿发布工作流已通过浏览器人工验收：草稿不出现在首页，公开详情返回 `404`；发布后可访问，撤回后再次返回 `404`。分页也完成了 HTTP 检查和浏览器人工验收，包括首页 6 篇文章按 5 + 1 分页、页码显示、前后页按钮边界、排序及总文章数。
+
+搜索功能除自动测试外，还完成了应用重启后的 HTTP 冒烟检查，涵盖公开和后台搜索命中 / 无结果、`q` 长度边界、搜索分页越界，以及 `%` / `_` 特殊字符。浏览器人工验证了 `DRAFT` → `PUBLISHED` 生命周期：草稿在后台搜索可见、公开搜索不可见；发布后公开搜索和文章详情均可访问。
 
 AI 生成的建议不一定符合项目使用的 Spring Boot 版本，也可能遗漏模板状态等边界情况，因此需要结合项目代码审查并通过测试验证；AI 并非独立完成整个项目。
 
@@ -179,11 +204,10 @@ MySQL 生产连接和部署尚未验证；默认运行使用 `dev`，不会自�
 
 ## 后续计划
 
-以下均为计划，尚未实现：
+当前功能开发已冻结。以下仅为未来可选改进，尚未实现：
 
-- 文章搜索
 - Markdown 正文
 - 标签或分类
-- MySQL 实际连接与表结构验证
+- MySQL 实际连接、表结构与部署验证
 - 生产环境数据库迁移
 - 公网部署前增加后台认证和权限控制
