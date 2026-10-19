@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${post.title} + ' · Blog'">文章详情 · Blog</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/vendor/highlight/github-dark.min.css}">
+    <script defer th:src="@{/vendor/highlight/highlight.min.js}"></script>
+    <script defer th:src="@{/js/blog.js}"></script>
 </head>
 <body>
     <header class="site-header">
@@ -30,7 +33,12 @@
             </header>
 
             <div class="post-divider" aria-hidden="true"></div>
-            <div class="post-content" th:text="${post.content}">文章正文</div>
+            <p class="reading-meta" th:text="|约 ${rendered.readingMinutes} 分钟阅读|">阅读时间</p>
+            <details class="article-toc" th:if="${!rendered.headings.isEmpty()}" open>
+                <summary>文章目录</summary>
+                <ol><li th:each="heading : ${rendered.headings}"><a th:href="|#${heading.id}|" th:text="${heading.title}">章节</a></li></ol>
+            </details>
+            <div class="post-content markdown-body" th:utext="${rendered.html}">文章正文</div>
         </article>
 
         <footer class="post-footer">

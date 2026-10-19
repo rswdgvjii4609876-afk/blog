@@ -42,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+@org.springframework.context.annotation.Import(com.example.blog.service.MarkdownService.class)
 @WebMvcTest(HomeController.class)
 class HomeControllerTest {
 

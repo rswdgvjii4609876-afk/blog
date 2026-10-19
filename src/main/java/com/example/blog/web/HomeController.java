@@ -1,6 +1,7 @@
 package com.example.blog.web;
 
 import com.example.blog.domain.Post;
+import com.example.blog.service.MarkdownService;
 import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
 import org.springframework.data.domain.PageRequest;
@@ -22,9 +23,11 @@ public class HomeController {
     private static final int PAGE_SIZE = 5;
 
     private final PostRepository postRepository;
+    private final MarkdownService markdown;
 
-    public HomeController(PostRepository postRepository) {
+    public HomeController(PostRepository postRepository, MarkdownService markdown) {
         this.postRepository = postRepository;
+        this.markdown = markdown;
     }
 
     @GetMapping("/")
@@ -60,6 +63,7 @@ public class HomeController {
         Post post = postRepository.findByIdAndStatus(id, PostStatus.PUBLISHED)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("post", post);
+        model.addAttribute("rendered", markdown.render(post.getContent()));
         return "post";
     }
 }

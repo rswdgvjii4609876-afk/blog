@@ -16,6 +16,7 @@ public class PostForm {
     private String summary;
 
     @NotBlank(message = "正文不能为空")
+    @Size(max = 100000, message = "正文不能超过100000个字符")
     private String content;
 
     @NotNull(message = "请选择文章状态")
