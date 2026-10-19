@@ -17,6 +17,10 @@ import java.util.Optional;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Post p where p.id = :id and p.status = com.example.blog.domain.PostStatus.PUBLISHED")
+    Optional<Post> lockPublished(Long id);
+
     Page<Post> findByStatus(PostStatus status, Pageable pageable);
 
     @Query("""

@@ -18,6 +18,24 @@ class PostTransactionTest {
     @Autowired PostRepository posts;
     @Autowired PostRevisionRepository revisions;
     @Autowired EntityManagerFactory factory;
+    @Autowired ReaderFeedbackService feedback;
+
+    @Test
+    void simultaneousFirstRatingsFromSameBrowserCreateExactlyOneVote() throws Exception {
+        var post = service.create("并发评分", "摘要", "正文", PostStatus.PUBLISHED, null);
+        var reader = java.util.UUID.randomUUID().toString();
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> { start.await(); feedback.rate(post.getId(), reader, 2); return true; });
+            var second = executor.submit(() -> { start.await(); feedback.rate(post.getId(), reader, 5); return true; });
+            start.countDown();
+            assertThat(first.get(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(second.get(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var state = feedback.feedback(post.getId(), reader, 0);
+            assertThat(state.votes()).isEqualTo(1);
+            assertThat(state.ownStars()).isIn(2, 5);
+        } finally { service.delete(post.getId(), posts.findById(post.getId()).orElseThrow().getVersion()); }
+    }
 
     @Test
     void failureAfterArticleFlushRollsBackContentAndRevisionTogether() {
