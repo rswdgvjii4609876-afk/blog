@@ -33,6 +33,36 @@ class PostTransactionTest {
     }
 
     @Test
+    void concurrentFirstEditsKeepOneBaselineAndOneWinningRevision() throws Exception {
+        var post = posts.saveAndFlush(new Post("旧文", "摘要", "原文", PostStatus.DRAFT));
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Boolean> edit = () -> {
+                start.await();
+                try {
+                    service.update(post.getId(), 0, "修改", "摘要", "新版", PostStatus.DRAFT, "并发编辑");
+                    return true;
+                } catch (org.springframework.dao.OptimisticLockingFailureException conflict) {
+                    return false;
+                } catch (org.springframework.web.server.ResponseStatusException conflict) {
+                    if (conflict.getStatusCode().value() != 409) throw conflict;
+                    return false;
+                }
+            };
+            var first = executor.submit(edit);
+            var second = executor.submit(edit);
+            start.countDown();
+            assertThat(java.util.List.of(first.get(20, java.util.concurrent.TimeUnit.SECONDS),
+                second.get(20, java.util.concurrent.TimeUnit.SECONDS))).containsExactlyInAnyOrder(true, false);
+            var history = revisions.findByPostIdOrderByNumberDesc(post.getId(), PageRequest.of(0, 10));
+            assertThat(history).hasSize(2);
+            assertThat(history.getContent().getLast().getContent()).isEqualTo("原文");
+        } finally {
+            service.delete(post.getId(), posts.findById(post.getId()).orElseThrow().getVersion());
+        }
+    }
+
+    @Test
     void databaseRejectsTwoWritersWhoReadTheSameVersion() {
         var post = service.create("原文", "摘要", "内容", PostStatus.DRAFT, null);
         var first = factory.createEntityManager();

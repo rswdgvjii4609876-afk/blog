@@ -1,213 +1,102 @@
-# Spring Boot 个人博客
+# 知行 · 学习成长博客
 
-这是一个基于 Spring Boot、Thymeleaf 和 Spring Data JPA 的个人博客项目，使用服务端模板渲染页面。
+用文字整理思考，用代码验证想法。基于 Spring Boot 的个人技术博客，支持从草稿写作到发布、修订与恢复的完整流程。
 
-当前支持公开文章列表和详情、草稿与已发布状态切换、首页与后台分页和搜索，以及后台文章创建、编辑、删除和表单校验。本地开发默认使用 H2；项目还包含 MySQL `prod` profile 配置骨架，尚未完成生产数据库验证。
+![首页实机截图](docs/screenshots/home-desktop.png)
 
-## 项目功能
+## 功能与特色
 
-- 查看已发布文章列表和文章详情
-- 后台文章 CRUD：创建、列表展示、编辑和删除
-- 新建文章时可选择“保存草稿”（`DRAFT`）或“发布文章”（`PUBLISHED`）
-- 编辑时可在草稿与已发布之间切换，并同时保存内容和状态
-- 后台显示全部文章及“草稿 / 已发布”状态；草稿仍可编辑和删除，但没有公开“查看”入口
-- 首页按 5 篇/页展示已发布文章，后台按 10 篇/页展示全部文章
-- 公开首页与后台均支持按标题（`title`）或摘要（`summary`）搜索，不搜索正文（`content`）
-- 公开搜索只包含 `PUBLISHED`，后台搜索包含 `DRAFT` 和 `PUBLISHED`
-- 使用 Bean Validation 校验标题、摘要和正文，并显示中文错误提示
-- 在 `dev` profile 下使用 H2，并初始化 3 篇 `PUBLISHED` 示例文章
-- 使用 Thymeleaf 服务端渲染页面，支持响应式布局
-
-公开列表与详情的 Repository 查询条件都限制为 `PUBLISHED`。草稿不会出现在首页，直接访问草稿的 `/posts/{id}` 与访问不存在的文章一样返回 `404`。
-
-`createdAt` 表示文章创建时间，发布或撤回不会改变该字段；当前没有独立的发布时间字段。
-
-当前考试要求不包含认证。后台目前没有登录认证或权限管理，请仅在可信的本地开发环境中使用管理页面；部署到公网前需要增加访问控制。
+- **Markdown 写作**：服务端预览、标题目录、代码高亮与复制、阅读时长估算。所有静态资源本地提供，不依赖运行时 CDN。
+- **文章成长记录**：每次保存保留内容快照与修改说明；历史分页、查看、恢复。恢复生成新版本并转为草稿，原有历史不丢失。
+- **并发保护**：旧编辑页不能覆盖新内容，冲突时保留输入。文章与历史在同一事务内保存。
+- **完整基础流程**：文章创建、编辑、发布、撤回、删除确认；公开和后台分页、标题/摘要搜索、表单校验。
+- **持久化**：默认 H2 文件库，重启保留数据；Flyway 管理建表，Hibernate 校验结构。空库仅初始化 3 篇示例文章。
+- **阅读体验**：统一视觉、响应式布局、键盘导航、空状态和友好错误页。
+- **安全边界**：公开查询隔离草稿；正文统一清洗；CSRF、CSP 和安全响应头；后台不要求登录，默认仅监听本机。
 
 ## 技术栈
 
-- Java 21
-- Spring Boot 4.1.1
-- Spring MVC
-- Thymeleaf
-- Spring Data JPA / Hibernate
-- Jakarta Bean Validation
-- H2（本地开发）
-- MySQL Connector/J（生产配置骨架）
-- Maven Wrapper
-- JUnit Jupiter、MockMvc、Mockito（测试）
-- Git / GitHub（版本管理）
+Java 21 **JDK** · Spring Boot 4.1.1 · Spring MVC · Thymeleaf · JPA/Hibernate · H2 · Flyway · Spring Security · CommonMark · jsoup。
+测试使用 JUnit、MockMvc、Mockito 和 Playwright/Chromium。依赖版本见 `pom.xml` 与浏览器测试锁文件。
 
-依赖版本由 Spring Boot Maven Parent 管理；项目没有为 Hibernate、H2、MySQL Driver 或测试库单独指定版本。
+## 本地启动
 
-## 项目结构
+先确认 `java -version` 和 `javac -version` 都为 21。仅有 Java 运行时无法编译。首次构建需要访问 Maven Central。
 
-```text
-src/main/java/com/example/blog
-├── config       # 开发环境示例文章初始化
-├── domain       # Post 文章实体和 PostStatus 状态枚举
-├── repository   # Spring Data JPA 数据访问接口
-└── web          # 页面 Controller 和 PostForm 表单对象
+Linux / macOS：
 
-src/main/resources
-├── templates    # Thymeleaf 页面
-└── application*.yml
-
-src/test/java/com/example/blog
-├── BlogApplicationTests.java
-├── repository   # Repository 状态过滤、分页和搜索测试
-└── web          # 公开页面和后台 Controller 测试
+```bash
+bash mvnw -B -ntp verify
+bash scripts/run-dev.sh
 ```
 
-项目当前没有 Service 层。
-
-## 本地运行
-
-前置条件：安装 Java 21。项目提供 Maven Wrapper，因此不需要单独安装 Maven。
-
-在 Windows PowerShell 中，从项目根目录运行：
+Windows PowerShell：
 
 ```powershell
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd -B -ntp verify
+java -Djava.net.preferIPv4Stack=true -jar target/blog-0.0.1-SNAPSHOT.jar
 ```
 
-默认配置使用 `dev` profile、H2 内存数据库，并监听端口 `8080`。启动后访问：
+在浏览器打开 `http://localhost:8080`。后台路径 `/admin/posts`，新建文章 `/admin/posts/new`。使用 `Ctrl+C` 停止应用。
 
-- 博客首页：<http://localhost:8080/>
-- 后台文章列表：<http://localhost:8080/admin/posts>
-- H2 Console：<http://localhost:8080/h2-console>
+始终从仓库根目录启动。默认数据存于 `data/blog.mv.db`，不会提交到 Git。可通过 `BLOG_DATA_DIR` 指定其他数据目录，通过启动参数 `--server.port=8081` 改端口。H2 Console 默认关闭。
 
-本地 H2 Console 连接参数（来源于 `application-dev.yml`）：
+**备份**：先停止应用，再复制整个 `data/` 目录；恢复时也先停止应用，再放回同一数据目录。不要把 `data/` 作为清理缓存删除。
 
-| 参数 | 值 |
-| --- | --- |
-| JDBC URL | `jdbc:h2:mem:blog;DB_CLOSE_DELAY=-1;MODE=MySQL` |
-| 数据库用户 | `sa` |
+**运行范围**：这是本地开发与面试演示版本，后台无认证，请保持默认本机监听。`prod` 是未验证的 MySQL 配置骨架，需要 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、独立建表迁移和访问控制；本项目的 Flyway SQL 面向 H2，不直接适用于 MySQL。
 
-`dev` 使用 H2 内存数据库和 `create-drop`。应用停止后，数据库内容不会持久保存。开发环境数据库为空时，`DataInitializer` 会加入 3 篇状态均为 `PUBLISHED` 的示例文章。
+## 测试与验收
 
-## 主要页面与路由
-
-| 方法 | 路由 | 用途 |
-| --- | --- | --- |
-| GET | `/?page=0` | 显示已发布文章列表，每页 5 篇；`page` 可省略 |
-| GET | `/?q=keyword` | 搜索已发布文章的标题或摘要 |
-| GET | `/?q=keyword&page=1` | 显示公开搜索结果的第 2 页 |
-| GET | `/posts/{id}` | 显示已发布文章详情；草稿或不存在的文章返回 `404` |
-| GET | `/admin/posts?page=0` | 显示全部文章及状态，每页 10 篇；`page` 可省略 |
-| GET | `/admin/posts?q=keyword` | 搜索全部状态文章的标题或摘要 |
-| GET | `/admin/posts?q=keyword&page=1` | 显示后台搜索结果的第 2 页 |
-| GET | `/admin/posts/new` | 显示新建文章表单 |
-| GET | `/admin/posts/{id}/edit` | 显示文章编辑表单 |
-| POST | `/admin/posts` | 校验并创建草稿或已发布文章 |
-| POST | `/admin/posts/{id}` | 校验并更新文章内容及状态 |
-| POST | `/admin/posts/{id}/delete` | 删除文章 |
-
-两个列表均按 `createdAt DESC, id DESC` 排序。URL 的 `page` 使用 0-based 页码，默认 `0`；界面使用 1-based 页码，例如 `page=0` 显示“第 1 / 2 页”。页大小与排序固定，不提供自定义参数。
-
-搜索在 Repository 层由数据库完成，公开搜索固定限制 `PostStatus.PUBLISHED`，查询条件为 `status = PUBLISHED AND (title match OR summary match)`；后台搜索包含全部状态。匹配忽略大小写，`%`、`_` 及查询转义字符均按普通搜索字符处理。
-
-搜索继续使用 `Page<Post>` 和 `Pageable`，保持公开每页 5 篇、后台每页 10 篇及上述排序。`totalElements` 表示当前搜索条件下的匹配数量，翻页链接保留 `q`。关键词去除首尾空白后为空时显示普通列表；超过 100 字符返回 `400`。无匹配结果时，第 0 页返回 `200` 并显示搜索空状态，正页码返回 `404`。
-
-负数、非整数或超出分页偏移范围的 `page` 返回 `400`；合法但超出实际总页数的页码返回 `404`。没有文章时，第 0 页仍正常显示空列表。总文章数统计符合查询条件的全部文章，翻页不会改变总数；公开列表不计入草稿。
-
-## 运行测试
-
-在 Windows PowerShell 的项目根目录运行：
-
-```powershell
-.\mvnw.cmd test
+```bash
+bash mvnw -B -ntp verify
 ```
 
-当前功能阶段最终测试基线：
+当前 JVM 基线：**84 项，0 失败、0 错误、0 跳过**。覆盖原有 CRUD/搜索分页、草稿隔离，以及 Markdown 安全、修订恢复、事务回滚、真实并发、CSRF 和迁移一致性。
+
+可选浏览器验收，需要 Node.js 22+：
+
+```bash
+cd tests/browser
+npm ci
+npx playwright install chromium
+npm test
+```
+
+Linux 若提示缺少系统库，按 Playwright 官方方式运行 `npx playwright install --with-deps chromium`。
+已有系统 Chromium 时，可设置 `CHROMIUM_PATH` 为其可执行文件，省去浏览器下载。
+浏览器测试会启动自己的 JVM 和临时 H2 文件库，验证预览、发布、恢复、并发编辑、删除、320/390/768/1440px 布局以及真实进程重启；不会操作开发数据库。
+默认使用测试端口 18080，可通过 `BLOG_TEST_PORT` 修改。截图和日志路径在测试输出中显示。
+
+[CI 配置](.github/workflows/verify.yml) 会在 push / PR 后执行 JVM 和浏览器验收。配置已提供，远程运行结果以 GitHub Actions 实际记录为准。
+
+## 目录与设计
 
 ```text
-Tests run: 67
-Failures: 0
-Errors: 0
-Skipped: 0
-BUILD SUCCESS
+src/main/java/com/example/blog/
+  config/       开发数据与请求防护
+  domain/       Post、PostStatus、PostRevision
+  repository/   文章查询与历史存取
+  service/      事务化写入、安全 Markdown 渲染
+  web/          页面、预览、表单和冲突处理
+src/main/resources/
+  db/migration/ H2 版本化建表 SQL
+  templates/    Thymeleaf 页面
+  static/       自有 CSS/JS 与本地代码高亮资源
+src/test/       JVM 测试及独立测试配置
+tests/browser/ 真实浏览器与重启验收
 ```
 
-该基线来自搜索功能完成后的最终自动测试，覆盖：
+- [关键设计与取舍](docs/ARCHITECTURE.md)：事务、快照、乐观锁、渲染边界。
+- [面试演示与理解检查](docs/DEMO.md)：6–8 分钟演示路线及需要解释的问题。
+- [验证记录与 AI 协作](docs/VALIDATION.md)：验证方式、实际困难、限制。
+- [升级计划](docs/UPGRADE.md) · [第三方资源与许可](docs/THIRD_PARTY.md) · [手机实机截图](docs/screenshots/home-mobile.png)。
 
-- 应用上下文加载（context load）与示例文章初始化
-- Controller 的 CRUD、Bean Validation、`DRAFT` / `PUBLISHED` 状态转换及草稿公开隔离
-- 普通分页、页码边界和 Repository 状态过滤
-- 标题 / 摘要搜索、忽略大小写、搜索草稿隔离、匹配总数、搜索分页和 LIKE 特殊字符
+## 实际遇到的问题
 
-本次仅更新文档，没有重新运行 Maven 测试。
+1. **能运行 Java 却不能编译**：机器只有 JRE；补齐 Java 21 JDK，并确保 Maven 使用正确的 `JAVA_HOME`。
+2. **云端 Maven 无法解析仓库**：Maven 不自动使用 HTTPS_PROXY；在仓库外配置代理与可写缓存，保留 TLS 和依赖校验。
+3. **多窗口覆盖与历史一致性**：增加版本凭据、JPA 乐观锁、事务和数据库唯一约束；以并发测试和两标签页验收验证。
+4. **恢复可能公开旧草稿**：规定恢复一律转为草稿，保留全部历史，并测试公开地址重新返回 404。
+5. **数据重启丢失**：改为文件库、Flyway 迁移与实体校验，用真实 JVM 重启验证，测试库保持隔离。
 
-## 开发过程
-
-项目通过多个独立 Git commit 分阶段开发，最近的功能提交依次包括：
-
-1. `56b92f8`：建立可运行首页和文章详情
-2. `5465f79`：增加文章创建
-3. `60eafef`：分离公开页面和后台管理流程
-4. `1f41f02`：增加文章编辑和删除
-5. `60f4cfb`：增加 `PostForm` 和 Bean Validation
-6. `e89268a`：修复编辑表单模式显示
-7. `da3d71f feat: add draft and publish workflow`：增加草稿与已发布状态及公开查询隔离
-8. `c9b4e36 feat: add post pagination`：增加首页与后台文章分页
-9. `b8be2c7 feat: add post search`：增加公开与后台文章搜索
-
-这些提交保留了项目从基础页面到后台管理、草稿发布工作流、分页和搜索功能的开发过程。
-
-## 遇到的问题与解决方案
-
-### 1. Spring Boot 4 测试 API 变化
-
-旧版教程中的 Web MVC 测试注解包路径不一定适用于 Spring Boot 4。项目根据当前使用的测试依赖调整了测试 API；例如 `WebMvcTest` 使用 `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest`。
-
-### 2. Thymeleaf 编辑表单 ID
-
-自动测试发现编辑表单 action 没有带上文章 ID：测试使用的文章对象尚未持久化，因此 `post.id` 为空。后来由 Controller 显式向 Model 提供 `postId`，模板据此生成 `/admin/posts/{id}`，不再依赖实体 ID 或内部请求上下文。
-
-### 3. PostForm 重构后的模式判断
-
-表单从直接绑定 `Post` 改为绑定 `PostForm` 后，按钮仍使用旧的 `post` 变量判断新增或编辑模式。检查发现后改为使用 `postId`，并在新增和编辑页面测试中增加按钮文字断言。
-
-### 4. 草稿的公开访问隔离
-
-仅在模板中隐藏草稿和“查看”入口，仍可能让人通过文章 ID 访问草稿。因此公开列表使用 `findByStatus(PUBLISHED, pageable)`，公开详情使用 `findByIdAndStatus(id, PUBLISHED)`，由 Repository 查询条件限制状态；查不到时统一返回 `404`。
-
-### 5. 分页排序稳定性
-
-多篇文章可能具有相同的创建时间。仅按 `createdAt DESC` 排序时，这些文章之间没有确定的顺序，因此增加 `id DESC` 作为第二排序条件，保证相同创建时间下的分页排序稳定。
-
-### 6. 公开搜索的条件分组
-
-公开搜索如果写成 `(status AND title) OR summary`，草稿可能通过摘要条件进入公开结果。因此 Repository 查询显式使用 `status AND (title OR summary)`，并通过真实 H2 Repository 测试验证草稿隔离。搜索分页保留 `q`，LIKE 特殊字符按普通字符处理，这些行为也由测试覆盖。
-
-## AI 使用与验证
-
-开发过程中使用 AI 辅助环境排查、代码建议、测试设计和 Bug 定位。验证方式包括 Maven tests（自动测试）、git diff（变更审查）、HTTP 检查和浏览器人工验收，并通过 git status 检查变更范围。
-
-草稿发布工作流已通过浏览器人工验收：草稿不出现在首页，公开详情返回 `404`；发布后可访问，撤回后再次返回 `404`。分页也完成了 HTTP 检查和浏览器人工验收，包括首页 6 篇文章按 5 + 1 分页、页码显示、前后页按钮边界、排序及总文章数。
-
-搜索功能除自动测试外，还完成了应用重启后的 HTTP 冒烟检查，涵盖公开和后台搜索命中 / 无结果、`q` 长度边界、搜索分页越界，以及 `%` / `_` 特殊字符。浏览器人工验证了 `DRAFT` → `PUBLISHED` 生命周期：草稿在后台搜索可见、公开搜索不可见；发布后公开搜索和文章详情均可访问。
-
-AI 生成的建议不一定符合项目使用的 Spring Boot 版本，也可能遗漏模板状态等边界情况，因此需要结合项目代码审查并通过测试验证；AI 并非独立完成整个项目。
-
-## 数据库说明
-
-### dev
-
-`dev` profile 使用 H2 内存数据库，默认在本地开发时启用。数据库为空时，`DataInitializer` 提供 3 篇状态均为 `PUBLISHED` 的示例文章，因此首页仍可显示初始化内容。应用停止后，数据库数据不会保留。
-
-### prod
-
-项目包含 MySQL `prod` profile 配置骨架，连接参数可通过环境变量提供，具体配置见 `application-prod.yml`。当前没有数据库迁移脚本，且 `ddl-auto` 使用 `validate`，所以启用 `prod` 前需要自行准备与实体一致的数据库和表结构，包括文章状态字段。
-
-MySQL 生产连接和部署尚未验证；默认运行使用 `dev`，不会自动切换到 `prod`。
-
-## 后续计划
-
-当前功能开发已冻结。以下仅为未来可选改进，尚未实现：
-
-- Markdown 正文
-- 标签或分类
-- MySQL 实际连接、表结构与部署验证
-- 生产环境数据库迁移
-- 公网部署前增加后台认证和权限控制
+Git 保留原有初始化、CRUD、草稿、分页和搜索等阶段提交；升级按计划、Markdown、修订、持久化与界面、验收交付分阶段提交，没有改写原历史。

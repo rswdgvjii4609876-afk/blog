@@ -1,0 +1,43 @@
+name: Verify blog
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Tests and executable JAR
+        run: bash mvnw -B -ntp verify
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/browser/package-lock.json
+      - name: Install browser test dependencies
+        working-directory: tests/browser
+        run: npm ci
+      - name: Install Chromium
+        working-directory: tests/browser
+        run: npx playwright install --with-deps chromium
+      - name: Browser workflow and process restart
+        env:
+          BLOG_SCREENSHOT_DIR: ${{ github.workspace }}/test-results/screenshots
+        run: node tests/browser/workflow.cjs
+      - name: Keep test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results
+          path: |
+            target/surefire-reports/
+            test-results/
+          retention-days: 7

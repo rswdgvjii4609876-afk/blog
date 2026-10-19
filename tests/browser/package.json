@@ -1,0 +1,6 @@
+{
+  "name": "blog-browser-validation",
+  "private": true,
+  "scripts": {"test": "node workflow.cjs"},
+  "devDependencies": {"playwright": "1.62.1"}
+}
