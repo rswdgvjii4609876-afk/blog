@@ -128,7 +128,7 @@ java -Djava.net.preferIPv4Stack=true -jar target/blog-0.0.1-SNAPSHOT.jar
 
 ### 推荐公网部署：Docker Compose + Caddy
 
-需要：Linux 服务器、Docker Engine/Compose、构建用 Java 21 JDK、指向服务器公网 IP 的域名，以及对外开放的 80/443 端口。
+需要：Linux 服务器、Docker Engine/Compose、构建用 Java 21 JDK、HTTPS 域名（无域名可用下节公网 IP 方案），以及对外开放的 80/443 端口。
 
 在服务器上：
 
@@ -155,6 +155,22 @@ docker compose logs --tail=80 app
 域名解析和防火墙正确时，Caddy 自动申请受信任证书并将 HTTP 跳转到 HTTPS。
 访客打开你配置的 **HTTPS 域名**，作者通过 `/login` 登录。
 应用的 8080 端口只在 Docker 内部网络使用，不应单独对公网开放。
+
+### 没有域名：公网 IP HTTPS
+
+Caddy 2.11.7 与 Let’s Encrypt 的短期 IP 证书可用于公网 IPv4/IPv6，无需先购买域名。
+设置 `.env` 中的 `BLOG_DOMAIN` 为自己的公网 IP，然后：
+
+```bash
+cp deploy/compose.ip.override.yaml compose.override.yaml
+docker compose config --quiet
+docker compose up -d --build
+```
+
+该本地覆盖文件会自动加载，使用显式 ACME `shortlived` 配置。先开放服务器 TCP 80/443。
+证书有效期约六天，保持 Caddy 运行并保留证书卷以自动续期。
+普通的默认 IP 配置可能使用本地 CA，不等同于浏览器信任的公网证书。
+实际 IP 签发必须在目标服务器上验证；配置解析通过不代表已经签发。
 
 [完整部署、升级、备份与排错说明](docs/DEPLOYMENT.md)
 

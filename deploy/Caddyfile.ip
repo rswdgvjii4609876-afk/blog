@@ -1,0 +1,15 @@
+# A public IP needs an explicit ACME issuer; the default IP policy uses a local CA.
+{$BLOG_DOMAIN} {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    encode zstd gzip
+    reverse_proxy app:8080
+    header {
+        -Server
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

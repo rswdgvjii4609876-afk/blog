@@ -1,0 +1,6 @@
+# Copy to the repository root as compose.override.yaml for automatic loading.
+# Local override is ignored by Git and survives normal project updates.
+services:
+  caddy:
+    volumes:
+      - ./deploy/Caddyfile.ip:/etc/caddy/Caddyfile:ro

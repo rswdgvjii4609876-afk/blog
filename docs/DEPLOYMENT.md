@@ -5,7 +5,7 @@
 ## 1. 准备部署目标
 
 - 一台支持 Docker 的 Linux 主机，建议至少 2 GB 内存；构建时也需要 Java 21 JDK。
-- 一个你控制的域名，例如 `blog.your-domain.com`，A 记录指向主机公网 IP。
+- 推荐使用你控制的域名，例如 `blog.your-domain.com`，A 记录指向主机公网 IP；没有域名可按第 9 节配置 IP 证书。
 - 入站开放 TCP 80/443；SSH 只向你需要的来源开放。不要向公网开放应用的 8080 或数据库文件。
 - 主机能访问镜像仓库、Maven Central 和 Caddy 的证书签发服务。
 - 首次上线建议先使用直接 DNS 解析，确认 HTTPS 正常，再配置其他 CDN。
@@ -152,3 +152,31 @@ python3 tests/deploy/verify.py
 - Compose 为应用配置 768 MB 内存上限，JVM 根据容器内存控制堆；实际容量仍需按文章规模与并发监测。
 - MySQL `prod` 是旧的未验收骨架，不是本文的公网 profile。
 - 没有评论、访客注册、分布式会话、多因素认证或自动备份。
+
+
+## 9. 没有域名：使用公网 IP 的受信任 HTTPS
+
+Let’s Encrypt 已开放 IP 地址证书，要求 `shortlived` ACME profile，有效期约 160 小时。
+可用 HTTP-01 / TLS-ALPN-01 验证 IP 控制权，不能用 DNS-01。Caddy 2.11.7 已确认支持所需 profile 语法。
+
+操作流程：
+
+1. 在云防火墙中放行 TCP 80 和 443，保持 SSH 规则，不向公网开放 8080。
+2. 将 `.env` 的 BLOG_DOMAIN 设置为你控制的公网 IP，并设置自己的管理员密码。
+3. 从仓库根目录复制 `deploy/compose.ip.override.yaml` 为 `compose.override.yaml`。
+4. 执行 `docker compose config --quiet`，再执行 `docker compose up -d --build`。
+5. 检查 `docker compose logs --tail=100 caddy` 中的实际证书签发结果。
+6. 使用 `https://你的公网IP` 验证证书、登录与访客阅读，不跳过浏览器证书警告。
+
+覆盖文件按容器目标路径替换 Caddyfile；不会修改已有域名配置。该本地文件不提交 Git，
+普通 `docker compose` 和后续更新都会继续加载它。以后切换域名时，备份并移走本地覆盖文件，
+将 BLOG_DOMAIN 改为真实域名，再重建 Caddy 服务。
+
+短期证书必须依靠持续运行的 Caddy 自动续期；不得删除 caddy-data 卷。
+服务器公网 IP 变更后需要更新配置并为新 IP 重新签发。
+测试只检查显式 ACME/profile 配置，未替用户对真实 IP 发起证书订单。
+
+官方参考：
+- https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability/
+- https://letsencrypt.org/docs/profiles/#shortlived
+- https://caddyserver.com/docs/caddyfile/directives/tls#acme

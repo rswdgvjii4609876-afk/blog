@@ -26,7 +26,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     environment:
-      BLOG_DOMAIN: ${BLOG_DOMAIN:?Set your real DNS hostname in .env}
+      BLOG_DOMAIN: ${BLOG_DOMAIN:?Set a public domain or public IP in .env}
       NO_PROXY: app,localhost,127.0.0.1
       no_proxy: app,localhost,127.0.0.1
     ports:

@@ -47,6 +47,19 @@ with tempfile.TemporaryDirectory(prefix=prefix) as temporary:
         docker("start", "-a", configuration)
         assert docker("inspect", "--format", "{{.State.ExitCode}}", configuration).stdout.strip() == "0"
         print("PASS: shipped Caddy configuration validation", flush=True)
+        ip_configuration = prefix + "-ip-config"
+        docker("create", "--name", ip_configuration, "--tmpfs", "/data", "--tmpfs", "/config",
+               "-e", "BLOG_DOMAIN=203.0.113.10", caddy_image,
+               "caddy", "adapt", "--config", "/etc/caddy/Caddyfile")
+        containers.append(ip_configuration)
+        ip_file = pathlib.Path(__file__).resolve().parents[2] / "deploy" / "Caddyfile.ip"
+        docker("cp", str(ip_file), ip_configuration + ":/etc/caddy/Caddyfile")
+        adapted = json.loads(docker("start", "-a", ip_configuration).stdout)
+        policies = adapted["apps"]["tls"]["automation"]["policies"]
+        assert any(issuer.get("module") == "acme" and issuer.get("profile") == "shortlived"
+                   and issuer.get("ca") == "https://acme-v02.api.letsencrypt.org/directory"
+                   for policy in policies for issuer in policy.get("issuers", []))
+        print("PASS: public IP explicitly requests ACME shortlived certificates (no real issuance)", flush=True)
         # A missing credential must fail startup, rather than leave an open admin UI.
         rejected = docker("run", "--rm", image, check=False)
         assert rejected.returncode != 0 and "BLOG_ADMIN_PASSWORD" in rejected.stdout + rejected.stderr

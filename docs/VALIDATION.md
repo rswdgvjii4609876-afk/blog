@@ -52,3 +52,11 @@ AI 协助了方案、Java/模板/样式/部署实现、测试、故障定位和�
 - 没有访客注册、评论、图片上传、自动备份、历史压缩、双因素认证与密码找回。
 - 备份复制和重启已验证；真实用户数据的恢复应先在独立环境演练。
 - 本地存储只记录主题偏好；代码复制依赖 Clipboard API，不可用时提示手动复制；阅读时间按字符数估算。
+
+## 无域名 IP HTTPS 配置
+
+已核对 Let's Encrypt 官方 IP 证书公开可用说明与 shortlived profile 文档，
+并用 Caddy 2.11.7 解析 `deploy/Caddyfile.ip`，断言其显式使用 ACME、Let's Encrypt 正式目录和 shortlived profile。
+Compose 覆盖文件也已验证：只替换一个 Caddyfile 挂载，应用端口仍不发布。
+完整隔离容器 HTTPS、认证、备份与持久化验收再次通过。
+此检查不对用户的真实公网 IP 发起证书订单，实际签发仍需目标主机开放验证端口后确认。
