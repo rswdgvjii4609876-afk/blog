@@ -12,20 +12,23 @@ public class ReaderWriteLimiter {
     private record Window(long start, int attempts) { }
     private final Map<String, Window> windows = new HashMap<>();
     private long nextCleanup;
-    public synchronized void check(String address, boolean comment) {
+    public void check(String address, boolean comment) {
+        check(address, comment ? "comment" : "rating", comment ? 5 : 15);
+    }
+    public synchronized void check(String address, String action, int limit) {
         long now = System.nanoTime();
         long minute = 60_000_000_000L;
         if (nextCleanup == 0 || now - nextCleanup >= 0) {
             windows.entrySet().removeIf(e -> now - e.getValue().start() >= minute);
             nextCleanup = now + minute;
         }
-        String key = (comment ? "comment:" : "rating:") + address;
+        String key = action + ":" + address;
         var window = windows.get(key);
         if (window == null || now - window.start() >= minute) {
             if (window == null && windows.size() >= 10000) throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
             windows.put(key, new Window(now, 1));
         } else {
-            if (window.attempts() >= (comment ? 5 : 15)) throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
+            if (window.attempts() >= limit) throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS);
             windows.put(key, new Window(window.start(), window.attempts() + 1));
         }
     }

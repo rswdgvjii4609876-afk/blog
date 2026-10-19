@@ -19,6 +19,29 @@ class PostTransactionTest {
     @Autowired PostRevisionRepository revisions;
     @Autowired EntityManagerFactory factory;
     @Autowired ReaderFeedbackService feedback;
+    @Autowired CommunityService community;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Test
+    void concurrentMoodAndPollUpdatesKeepOneRowPerBrowser() throws Exception {
+        String reader = java.util.UUID.randomUUID().toString();
+        community.createPoll("并发互动", "甲\n乙");
+        long poll = community.home(reader, 0).poll().id();
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> { start.await(); community.mood(reader, CommunityService.Mood.CALM); community.vote(poll, reader, 0); return true; });
+            var second = executor.submit(() -> { start.await(); community.mood(reader, CommunityService.Mood.HAPPY); community.vote(poll, reader, 1); return true; });
+            start.countDown();
+            assertThat(first.get(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(second.get(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(jdbc.queryForObject("select count(*) from mood_entries where reader_id=?", Long.class, reader)).isEqualTo(1);
+            assertThat(community.poll(poll, reader).votes()).isEqualTo(1);
+        } finally {
+            jdbc.update("delete from poll_votes where poll_id=?", poll);
+            jdbc.update("delete from reader_polls where id=?", poll);
+            jdbc.update("delete from mood_entries where reader_id=?", reader);
+        }
+    }
 
     @Test
     void simultaneousFirstRatingsFromSameBrowserCreateExactlyOneVote() throws Exception {
