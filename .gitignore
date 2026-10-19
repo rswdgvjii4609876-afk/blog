@@ -56,3 +56,9 @@ data/
 playwright-report/
 test-results/
 node_modules/
+
+# Safe deployment template (no credential values)
+!.env.example
+backups/
+__pycache__/
+*.pyc

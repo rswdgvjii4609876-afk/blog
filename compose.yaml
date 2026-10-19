@@ -1,0 +1,50 @@
+name: zhixing
+services:
+  app:
+    build: .
+    image: zhixing-blog:local
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: public
+      BLOG_ADMIN_USERNAME: ${BLOG_ADMIN_USERNAME:-admin}
+      BLOG_ADMIN_PASSWORD: ${BLOG_ADMIN_PASSWORD:?Set BLOG_ADMIN_PASSWORD in .env}
+    volumes:
+      - blog-data:/app/data
+    expose:
+      - "8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      BLOG_DOMAIN: ${BLOG_DOMAIN:?Set your real DNS hostname in .env}
+      NO_PROXY: app,localhost,127.0.0.1
+      no_proxy: app,localhost,127.0.0.1
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+volumes:
+  blog-data:
+  caddy-data:
+  caddy-config:
