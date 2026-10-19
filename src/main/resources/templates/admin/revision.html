@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>查看历史版本 · 知行</title><link rel="stylesheet" th:href="@{/css/style.css}"><link rel="stylesheet" th:href="@{/vendor/highlight/github-dark.min.css}">
+    <script defer th:src="@{/vendor/highlight/highlight.min.js}"></script><script defer th:src="@{/js/blog.js}"></script></head>
+<body>
+<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><span class="nav-context">历史快照 · 仅后台可见</span><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a></div></nav></header>
+<main class="reading-shell">
+    <a class="back-link" th:href="@{/admin/posts/{id}/history(id=${post.id})}">← 返回成长记录</a>
+    <section class="notice"><p><strong th:text="|历史版本 ${revision.number}|"></strong> · <span th:text="${revision.changeNote}"></span></p><p>恢复此快照后，文章将变为草稿；确认内容后需要重新发布。</p>
+        <form method="post" data-confirm="确定恢复此版本？文章将转为草稿，原有修订记录仍会保留。" th:action="@{/admin/posts/{id}/history/{rid}/restore(id=${post.id},rid=${revision.id})}">
+            <input type="hidden" name="version" th:value="${post.version}"><button class="button button-primary" type="submit">恢复为草稿</button>
+        </form>
+    </section>
+    <article class="post-article"><header class="post-heading"><h1 class="post-title" th:text="${revision.title}"></h1><p class="post-summary" th:text="${revision.summary}"></p><p class="post-date" th:text="${#temporals.format(revision.savedAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}"></p></header>
+        <div class="post-divider"></div><div class="post-content markdown-body" th:utext="${rendered.html}"></div>
+    </article>
+</main></body></html>

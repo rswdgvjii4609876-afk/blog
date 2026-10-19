@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -40,6 +41,12 @@ public class Post {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Version
+    private long version;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
     protected Post() {
         // JPA requires a no-arg constructor
     }
@@ -56,14 +63,19 @@ public class Post {
         this.title = title;
         this.summary = summary;
         this.content = content;
+        this.updatedAt = Instant.now();
     }
 
     @PrePersist
     void onCreate() {
         if (createdAt == null) {
             createdAt = Instant.now();
+            updatedAt = createdAt;
         }
     }
+
+    public long getVersion() { return version; }
+    public Instant getUpdatedAt() { return updatedAt == null ? createdAt : updatedAt; }
 
     public Long getId() { return id; }
     public String getTitle() { return title; }

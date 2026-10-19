@@ -29,6 +29,11 @@
             </header>
 
             <form class="post-form" method="post" th:object="${postForm}" th:action="${postId == null} ? @{/admin/posts} : @{/admin/posts/{id}(id=${postId})}">
+                <input type="hidden" th:if="${postId != null}" th:field="*{version}">
+                <div class="notice notice-error" th:if="${#fields.hasErrors('version')}" role="alert">
+                    <span th:errors="*{version}">版本冲突</span>
+                    <a th:if="${postId != null}" th:href="@{/admin/posts/{id}/edit(id=${postId})}" target="_blank" rel="noopener">在新窗口查看最新内容</a>
+                </div>
                 <div class="form-field">
                     <label for="title">标题</label>
                     <input id="title" type="text" maxlength="100" required th:field="*{title}" th:attr="aria-describedby=${#fields.hasErrors('title') ? 'title-error' : null}">
@@ -60,7 +65,13 @@
                     <span id="status-error" class="field-error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">状态错误</span>
                 </div>
 
+                <div class="form-field">
+                    <label for="changeNote">修改说明 <span class="field-hint">（选填）</span></label>
+                    <input id="changeNote" th:field="*{changeNote}" maxlength="300" placeholder="这次解决了什么问题？">
+                    <span class="field-error" th:if="${#fields.hasErrors('changeNote')}" th:errors="*{changeNote}"></span>
+                </div>
                 <div class="form-actions">
+                    <a th:if="${postId != null}" class="button button-secondary" th:href="@{/admin/posts/{id}/history(id=${postId})}">修订记录</a>
                     <button class="button button-secondary" type="submit" name="status" value="DRAFT" th:if="${postId == null}">保存草稿</button>
                     <button class="button button-primary" type="submit" name="status" value="PUBLISHED" th:if="${postId == null}">发布文章</button>
                     <button class="button button-primary" type="submit" th:if="${postId != null}">保存修改</button>

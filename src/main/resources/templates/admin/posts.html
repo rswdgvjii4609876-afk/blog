@@ -53,7 +53,9 @@
                         <nav class="admin-actions" aria-label="文章操作">
                             <a class="action-link" th:if="${post.status == T(com.example.blog.domain.PostStatus).PUBLISHED}" th:href="@{/posts/{id}(id=${post.id})}">查看</a>
                             <a class="button button-secondary" th:href="@{/admin/posts/{id}/edit(id=${post.id})}">编辑</a>
+                            <a class="action-link" th:href="@{/admin/posts/{id}/history(id=${post.id})}">修订记录</a>
                             <form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}">
+                                <input type="hidden" name="version" th:value="${post.version}">
                                 <button class="button button-danger" type="submit">删除</button>
                             </form>
                         </nav>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>文章成长记录 · 知行</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body>
+<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><span class="nav-context">文章成长记录</span><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a></div></nav></header>
+<main class="site-container admin-page">
+    <a class="back-link" th:href="@{/admin/posts/{id}/edit(id=${post.id})}">← 返回编辑</a>
+    <header class="history-heading"><p class="eyebrow">REVISION JOURNAL / 文章成长记录</p><h1 th:text="${post.title}">标题</h1><p class="page-description">每次保存都是一次积累。恢复会创建新版本，并将文章转为草稿，不会删除原有记录。</p></header>
+    <ol class="timeline" th:if="${revisionPage.hasContent()}">
+        <li th:each="revision : ${revisionPage.content}">
+            <div class="timeline-meta"><span class="status-badge" th:text="|版本 ${revision.number}|">版本</span><time th:text="${#temporals.format(revision.savedAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}"></time></div>
+            <h2><a th:href="@{/admin/posts/{id}/history/{rid}(id=${post.id},rid=${revision.id})}" th:text="${revision.changeNote}">修改说明</a></h2>
+            <p th:text="${revision.title}"></p><span class="status-badge" th:text="${revision.status.name() == 'DRAFT' ? '当时为草稿' : '当时已发布'}"></span>
+            <a class="action-link" th:href="@{/admin/posts/{id}/history/{rid}(id=${post.id},rid=${revision.id})}">查看此版本 →</a>
+        </li>
+    </ol>
+    <section class="empty-state" th:unless="${revisionPage.hasContent()}"><h2>这篇文章还没有修订记录</h2><p>下次保存时会同时保留当前内容和新版本。</p></section>
+    <nav class="pagination" th:if="${revisionPage.totalPages > 1}" aria-label="历史分页">
+        <a th:if="${revisionPage.hasPrevious()}" th:href="@{/admin/posts/{id}/history(id=${post.id},page=${revisionPage.number - 1})}">上一页</a>
+        <span th:text="|第 ${revisionPage.number + 1} / ${revisionPage.totalPages} 页|"></span>
+        <a th:if="${revisionPage.hasNext()}" th:href="@{/admin/posts/{id}/history(id=${post.id},page=${revisionPage.number + 1})}">下一页</a>
+    </nav>
+</main></body></html>

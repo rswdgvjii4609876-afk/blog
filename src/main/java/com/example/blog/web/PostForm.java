@@ -22,6 +22,16 @@ public class PostForm {
     @NotNull(message = "请选择文章状态")
     private PostStatus status;
 
+    private Long version;
+
+    @Size(max = 300, message = "修改说明不能超过300个字符")
+    private String changeNote;
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
+    public String getChangeNote() { return changeNote; }
+    public void setChangeNote(String changeNote) { this.changeNote = changeNote; }
+
     public String getTitle() {
         return title;
     }

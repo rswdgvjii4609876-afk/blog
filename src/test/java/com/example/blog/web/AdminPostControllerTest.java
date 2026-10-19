@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+@org.springframework.context.annotation.Import(com.example.blog.service.PostService.class)
 @WebMvcTest(AdminPostController.class)
 class AdminPostControllerTest {
 
@@ -53,6 +54,9 @@ class AdminPostControllerTest {
 
     @MockitoBean
     private PostRepository postRepository;
+
+    @MockitoBean
+    private com.example.blog.repository.PostRevisionRepository revisionRepository;
 
     @Test
     void adminPostsRendersWhenPresent() throws Exception {
@@ -362,9 +366,10 @@ class AdminPostControllerTest {
     void createPostSavesAndRedirectsToDetail() throws Exception {
         Post savedPost = org.mockito.Mockito.mock(Post.class);
         when(savedPost.getId()).thenReturn(42L);
+        when(savedPost.getStatus()).thenReturn(PostStatus.PUBLISHED);
         when(postRepository.save(any(Post.class))).thenReturn(savedPost);
 
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "测试标题")
                 .param("summary", "测试摘要")
                 .param("content", "测试正文")
@@ -418,7 +423,7 @@ class AdminPostControllerTest {
         Post existingPost = new Post("原标题", "原摘要", "原正文", before);
         when(postRepository.findById(42L)).thenReturn(Optional.of(existingPost));
 
-        mockMvc.perform(post("/admin/posts/42")
+        mockMvc.perform(post("/admin/posts/42").param("version", "0")
                 .param("title", "修改后的标题")
                 .param("summary", "修改后的摘要")
                 .param("content", "修改后的正文")
@@ -437,7 +442,7 @@ class AdminPostControllerTest {
     void updatePostReturnsNotFoundWhenPostIsMissing() throws Exception {
         when(postRepository.findById(999L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(post("/admin/posts/999")
+        mockMvc.perform(post("/admin/posts/999").param("version", "0")
                 .param("title", "修改后的标题")
                 .param("summary", "修改后的摘要")
                 .param("content", "修改后的正文")
@@ -452,7 +457,7 @@ class AdminPostControllerTest {
         Post existingPost = new Post("标题", "摘要", "正文", PostStatus.DRAFT);
         when(postRepository.findById(42L)).thenReturn(Optional.of(existingPost));
 
-        mockMvc.perform(post("/admin/posts/42/delete"))
+        mockMvc.perform(post("/admin/posts/42/delete").param("version", "0"))
             .andExpect(status().is3xxRedirection())
             .andExpect(redirectedUrl("/admin/posts"));
 
@@ -463,7 +468,7 @@ class AdminPostControllerTest {
     void deletePostReturnsNotFoundWhenPostIsMissing() throws Exception {
         when(postRepository.findById(999L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(post("/admin/posts/999/delete"))
+        mockMvc.perform(post("/admin/posts/999/delete").param("version", "0"))
             .andExpect(status().isNotFound());
 
         verify(postRepository, never()).delete(any(Post.class));
@@ -471,7 +476,7 @@ class AdminPostControllerTest {
 
     @Test
     void createPostRejectsBlankTitle() throws Exception {
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "")
                 .param("summary", "正常摘要")
                 .param("content", "正常正文")
@@ -485,7 +490,7 @@ class AdminPostControllerTest {
 
     @Test
     void createPostRejectsBlankSummary() throws Exception {
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "正常标题")
                 .param("summary", "")
                 .param("content", "正常正文")
@@ -499,7 +504,7 @@ class AdminPostControllerTest {
 
     @Test
     void createPostRejectsBlankContent() throws Exception {
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "正常标题")
                 .param("summary", "正常摘要")
                 .param("content", "")
@@ -513,7 +518,7 @@ class AdminPostControllerTest {
 
     @Test
     void createPostRejectsTitleLongerThan100Characters() throws Exception {
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "a".repeat(101))
                 .param("summary", "正常摘要")
                 .param("content", "正常正文")
@@ -527,7 +532,7 @@ class AdminPostControllerTest {
 
     @Test
     void createPostRejectsSummaryLongerThan300Characters() throws Exception {
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "正常标题")
                 .param("summary", "a".repeat(301))
                 .param("content", "正常正文")
@@ -541,7 +546,7 @@ class AdminPostControllerTest {
 
     @Test
     void updatePostRejectsInvalidInputAndKeepsEditFormAction() throws Exception {
-        mockMvc.perform(post("/admin/posts/42")
+        mockMvc.perform(post("/admin/posts/42").param("version", "0")
                 .param("title", "")
                 .param("summary", "正常摘要")
                 .param("content", "正常正文")
@@ -559,7 +564,7 @@ class AdminPostControllerTest {
     void createDraftSavesAndRedirectsToAdminList() throws Exception {
         when(postRepository.save(any(Post.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        mockMvc.perform(post("/admin/posts")
+        mockMvc.perform(post("/admin/posts").param("version", "0")
                 .param("title", "草稿标题")
                 .param("summary", "草稿摘要")
                 .param("content", "草稿正文")
@@ -580,7 +585,7 @@ class AdminPostControllerTest {
     @ValueSource(strings = "INVALID")
     void createAndUpdateRejectMissingOrInvalidStatus(String submittedStatus) throws Exception {
         for (String path : List.of("/admin/posts", "/admin/posts/42")) {
-            var request = post(path)
+            var request = post(path).param("version", "0")
                 .param("title", "正常标题")
                 .param("summary", "正常摘要")
                 .param("content", "正常正文");

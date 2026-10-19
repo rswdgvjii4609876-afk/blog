@@ -1,6 +1,7 @@
 package com.example.blog.web;
 
 import jakarta.validation.Valid;
+import com.example.blog.service.PostService;
 import com.example.blog.domain.Post;
 import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
@@ -23,9 +24,11 @@ public class AdminPostController {
     private static final int PAGE_SIZE = 10;
 
     private final PostRepository postRepository;
+    private final PostService postService;
 
-    public AdminPostController(PostRepository postRepository) {
+    public AdminPostController(PostRepository postRepository, PostService postService) {
         this.postRepository = postRepository;
+        this.postService = postService;
     }
 
     @GetMapping("/admin/posts")
@@ -71,6 +74,7 @@ public class AdminPostController {
         postForm.setSummary(post.getSummary());
         postForm.setContent(post.getContent());
         postForm.setStatus(post.getStatus());
+        postForm.setVersion(post.getVersion());
         model.addAttribute("postForm", postForm);
         model.addAttribute("postId", id);
         return "admin/post-form";
@@ -84,9 +88,9 @@ public class AdminPostController {
         if (bindingResult.hasErrors()) {
             return "admin/post-form";
         }
-        Post post = new Post(postForm.getTitle(), postForm.getSummary(), postForm.getContent(), postForm.getStatus());
-        Post saved = postRepository.save(post);
-        return post.getStatus() == PostStatus.PUBLISHED
+        Post saved = postService.create(postForm.getTitle(), postForm.getSummary(), postForm.getContent(),
+            postForm.getStatus(), postForm.getChangeNote());
+        return saved.getStatus() == PostStatus.PUBLISHED
             ? "redirect:/posts/" + saved.getId()
             : "redirect:/admin/posts";
     }
@@ -98,24 +102,31 @@ public class AdminPostController {
         BindingResult bindingResult,
         Model model
     ) {
+        if (postForm.getVersion() == null || postForm.getVersion() < 0) {
+            bindingResult.rejectValue("version", "missing", "编辑凭据已失效，请重新打开文章编辑页");
+        }
         if (bindingResult.hasErrors()) {
             model.addAttribute("postId", id);
             return "admin/post-form";
         }
-        Post post = postRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        post.update(postForm.getTitle(), postForm.getSummary(), postForm.getContent(), postForm.getStatus());
-        postRepository.save(post);
+        Post post;
+        try {
+            post = postService.update(id, postForm.getVersion(), postForm.getTitle(), postForm.getSummary(),
+                postForm.getContent(), postForm.getStatus(), postForm.getChangeNote());
+        } catch (ResponseStatusException conflict) {
+            if (conflict.getStatusCode() != HttpStatus.CONFLICT) throw conflict;
+            bindingResult.rejectValue("version", "conflict", conflict.getReason());
+            model.addAttribute("postId", id);
+            return "admin/post-form";
+        }
         return post.getStatus() == PostStatus.PUBLISHED
             ? "redirect:/posts/" + id
             : "redirect:/admin/posts";
     }
 
     @PostMapping("/admin/posts/{id}/delete")
-    public String deletePost(@PathVariable Long id) {
-        Post post = postRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        postRepository.delete(post);
+    public String deletePost(@PathVariable Long id, @RequestParam long version) {
+        postService.delete(id, version);
         return "redirect:/admin/posts";
     }
 }

@@ -770,3 +770,14 @@ textarea {
 .preview-panel { border: 1px solid var(--color-border); padding: 24px; border-radius: 12px; background: #fff; }
 #preview-status { font-size: 13px; color: var(--color-secondary); margin: 0; }
 [hidden] { display: none !important; }
+
+.history-heading { margin-block: 32px; max-width: 780px; }
+.history-heading h1 { margin: 8px 0; font-size: clamp(28px, 4vw, 42px); overflow-wrap: anywhere; }
+.timeline { list-style: none; margin: 36px 0; padding: 0 0 0 24px; border-left: 2px solid var(--color-border); }
+.timeline > li { position: relative; margin-bottom: 26px; padding: 22px 26px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 14px; }
+.timeline > li::before { content: ''; position: absolute; left: -32px; top: 28px; width: 12px; height: 12px; background: var(--color-link); border: 3px solid var(--color-background); border-radius: 50%; }
+.timeline h2 { font-size: 19px; margin-block: 12px 6px; overflow-wrap: anywhere; }
+.timeline p { margin-top: 0; overflow-wrap: anywhere; }
+.timeline-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 12px; color: var(--color-secondary); }
+.notice { margin-block: 22px; padding: 16px 20px; border-radius: 12px; border: 1px solid var(--color-border); background: var(--color-surface); font-size: 14px; }
+.notice-error { color: var(--color-danger); border-color: currentColor; }
