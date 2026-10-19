@@ -1,67 +1,191 @@
-# 知行 · 学习成长博客
+# 知行 · ZHIXING JOURNAL
 
-用文字整理思考，用代码验证想法。基于 Spring Boot 的个人技术博客，支持从草稿写作到发布、修订与恢复的完整流程。
+**不止于学会，更要有所创造。**
 
-![首页实机截图](docs/screenshots/home-desktop.png)
+一个基于 Java 21 / Spring Boot 的个人技术博客。用 Markdown 记录实践，用修订时间线与逐行对比展示思考如何完善；支持本机使用，以及带管理员认证的公网部署。
+
+![新版首页实机截图](docs/screenshots/home-desktop.png)
+
+## 导航
+
+- [功能与特色](#功能与特色)
+- [技术与结构](#技术与结构)
+- [本机启动](#本机启动)
+- [让其他人访问](#让其他人访问)
+- [数据与升级](#数据与升级)
+- [验证与自动检查](#验证与自动检查)
+- [常见问题](#常见问题)
+- [文档与限制](#文档与限制)
 
 ## 功能与特色
 
-- **Markdown 写作**：服务端预览、标题目录、代码高亮与复制、阅读时长估算。所有静态资源本地提供，不依赖运行时 CDN。
-- **文章成长记录**：每次保存保留内容快照与修改说明；历史分页、查看、恢复。恢复生成新版本并转为草稿，原有历史不丢失。
-- **并发保护**：旧编辑页不能覆盖新内容，冲突时保留输入。文章与历史在同一事务内保存。
-- **完整基础流程**：文章创建、编辑、发布、撤回、删除确认；公开和后台分页、标题/摘要搜索、表单校验。
-- **持久化**：默认 H2 文件库，重启保留数据；Flyway 管理建表，Hibernate 校验结构。空库仅初始化 3 篇示例文章。
-- **阅读体验**：统一视觉、响应式布局、键盘导航、空状态和友好错误页。
-- **安全边界**：公开查询隔离草稿；正文统一清洗；CSRF、CSP 和安全响应头；后台不要求登录，默认仅监听本机。
+| 模块 | 已实现 |
+| --- | --- |
+| 公开阅读 | 已发布文章列表、详情、搜索、分页、无匹配和错误页面 |
+| 写作 | Markdown、安全预览、表单校验、草稿、发布、撤回、确认删除 |
+| 成长记录 | 每次保存生成快照、修改说明、历史分页、恢复为草稿、并发编辑保护 |
+| **版本逐行对比** | 历史与当前内容的源文差异、增删行高亮、双行号、增删统计、标题/摘要/状态对照 |
+| **沉浸阅读** | 深色与浅色切换、主题记忆、阅读进度、当前目录定位、代码高亮和复制 |
+| 界面 | 深色编辑风格、暖金强调色、统一卡片与字体层级、手机/平板/桌面适配 |
+| 对外访问 | 管理员登录、退出、访客权限隔离、登录限流、CSRF、安全响应头 |
+| 部署 | 非 root 容器、只读根文件系统、持久卷、数据库健康检查、Caddy HTTPS 代理 |
 
-## 技术栈
+普通读者无需注册。作者在共享/公网模式中登录后管理文章。默认本机模式仍可直接操作后台。
 
-Java 21 **JDK** · Spring Boot 4.1.1 · Spring MVC · Thymeleaf · JPA/Hibernate · H2 · Flyway · Spring Security · CommonMark · jsoup。
-测试使用 JUnit、MockMvc、Mockito 和 Playwright/Chromium。依赖版本见 `pom.xml` 与浏览器测试锁文件。
+### 两个重点设计
 
-## 本地启动
+**文章成长记录**：修订是一份独立快照。恢复不会删除旧历史，而是创建新记录并转为草稿，防止撤回过的内容意外重新公开。旧窗口不能覆盖新窗口已经保存的文章。
 
-先确认 `java -version` 和 `javac -version` 都为 21。仅有 Java 运行时无法编译。首次构建需要访问 Maven Central。
+**看得见的版本差异**：通过 LCS 找出 Markdown 源文的增删行，输出始终按文字转义。单侧最多 600 行，超过上限明确提示，避免无界二次复杂度影响服务响应。
 
-### 一键检查并启动
+[查看版本对比截图](docs/screenshots/diff-desktop.png) · [登录页截图](docs/screenshots/login-desktop.png) · [手机首页截图](docs/screenshots/home-mobile.png)
 
-Windows 双击仓库根目录的 `start.cmd`；Linux / macOS 运行 `bash start.sh`。
-脚本会先运行测试并重新构建，再启动当前代码，避免误用旧 JAR。
-首次运行需要联网下载依赖。启动后保持终端窗口打开，在浏览器打开 `http://localhost:8080`。
+## 技术与结构
 
-也可以按下面步骤分别构建和启动。
+- Java 21 **JDK**、Spring Boot 4.1.1、Maven Wrapper。
+- Spring MVC、Thymeleaf、Bean Validation。
+- Spring Data JPA / Hibernate、H2 文件库、Flyway。
+- Spring Security：表单登录、BCrypt、CSRF、CSP、session 安全配置。
+- CommonMark、jsoup；本地提供 highlight.js，不依赖运行时 CDN。
+- JUnit、MockMvc、Mockito、Playwright / Chromium、Docker / Caddy 集成验证。
 
-Linux / macOS：
+```text
+src/main/java/com/example/blog/
+  config/       安全配置、登录限流、开发示例数据
+  domain/       文章、状态、修订快照
+  repository/   状态隔离查询、搜索分页、历史存取
+  service/      事务写入、安全 Markdown、有限规模版本对比
+  web/          页面、登录、预览、健康检查与冲突处理
+src/main/resources/
+  db/migration/ H2 版本化建表 SQL
+  templates/    Thymeleaf 页面
+  static/       CSS、主题/阅读交互、本地第三方资源
+scripts/        构建后启动脚本
+tests/browser/ 本地模式与登录模式浏览器流程
+tests/deploy/  Docker、可信 HTTPS、持久卷验收
+deploy/         Caddy HTTPS 配置
+docs/           设计、部署、验证、演示与截图
+```
+
+## 本机启动
+
+### 前提
+
+安装 Java 21 **JDK**，并确认两个命令都能运行：
+
+```text
+java -version
+javac -version
+```
+
+仅有 Java 运行时不够。首次构建需要联网下载 Maven 与依赖。
+
+### Windows
+
+1. 下载代码 ZIP 后**先全部解压**，不要在压缩包中打开脚本。
+2. 确认同一文件夹中有 `start.cmd`、`mvnw.cmd` 和 `pom.xml`。
+3. 双击 `start.cmd`，等待测试和启动完成；保持命令窗口打开。
+4. 浏览器打开 `http://localhost:8080`；后台路径为 `/admin/posts`。
+
+### Linux / macOS
+
+```bash
+git clone https://github.com/rswdgvjii4609876-afk/blog.git
+cd blog
+bash start.sh
+```
+
+一键脚本会先执行测试并重新构建，再启动当前代码。也可以分开执行：
 
 ```bash
 bash mvnw -B -ntp verify
 bash scripts/run-dev.sh
 ```
 
-Windows PowerShell：
+Windows 的分步命令：
 
 ```powershell
 .\mvnw.cmd -B -ntp verify
 java -Djava.net.preferIPv4Stack=true -jar target/blog-0.0.1-SNAPSHOT.jar
 ```
 
-在浏览器打开 `http://localhost:8080`。后台路径 `/admin/posts`，新建文章 `/admin/posts/new`。使用 `Ctrl+C` 停止应用。
+默认使用 `dev`，仅监听 `127.0.0.1:8080`，不要求登录。空库初始化 3 篇示例文章。使用 `Ctrl+C` 停止。
 
-始终从仓库根目录启动。默认数据存于 `data/blog.mv.db`，不会提交到 Git。可通过 `BLOG_DATA_DIR` 指定其他数据目录，通过启动参数 `--server.port=8081` 改端口。H2 Console 默认关闭。
+## 让其他人访问
 
-**备份**：先停止应用，再复制整个 `data/` 目录；恢复时也先停止应用，再放回同一数据目录。不要把 `data/` 作为清理缓存删除。
+**GitHub 保存代码，并不会自动托管 Spring Boot 网站。别人的 `localhost` 指向别人的电脑。**
+公网使用需要一台持续运行的服务器/支持 Docker 和持久存储的托管服务，以及 HTTPS 入口。
 
-**运行范围**：这是本地开发与面试演示版本，后台无认证，请保持默认本机监听。`prod` 是未验证的 MySQL 配置骨架，需要 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`、独立建表迁移和访问控制；本项目的 Flyway SQL 面向 H2，不直接适用于 MySQL。
+### 模式选择
 
-## 测试与验收
+| 模式 | 启动参数 | 监听与登录 | 用途 |
+| --- | --- | --- | --- |
+| 本机 | 默认 `dev` | 本机监听；免登录 | 独立开发与演示 |
+| 共享 | `--spring.profiles.active=shared` | 全网卡；必须设置管理员密码 | 可信局域网或部署调试 |
+| 公网 | `--spring.profiles.active=public` | 全网卡；认证、Secure session cookie | 必须位于可信 HTTPS 代理之后 |
+
+即使不切换 profile，只要将监听地址改成非本机地址，也会强制启用管理员认证。`public` / `shared` 不能通过关闭一个布尔开关绕过登录。
+
+### 推荐公网部署：Docker Compose + Caddy
+
+需要：Linux 服务器、Docker Engine/Compose、构建用 Java 21 JDK、指向服务器公网 IP 的域名，以及对外开放的 80/443 端口。
+
+在服务器上：
+
+```bash
+git clone https://github.com/rswdgvjii4609876-afk/blog.git
+cd blog
+bash mvnw -B -ntp verify
+cp .env.example .env
+chmod 600 .env
+```
+
+在服务器本地编辑 `.env`：设置真实 `BLOG_DOMAIN`、管理员账号和自己的随机密码。
+密码要求 16–64 个字符且不超过 72 个 UTF-8 字节；不提供默认密码。不要提交 `.env` 或将密码发到聊天中。
+
+然后：
+
+```bash
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail=80 app
+```
+
+域名解析和防火墙正确时，Caddy 自动申请受信任证书并将 HTTP 跳转到 HTTPS。
+访客打开你配置的 **HTTPS 域名**，作者通过 `/login` 登录。
+应用的 8080 端口只在 Docker 内部网络使用，不应单独对公网开放。
+
+[完整部署、升级、备份与排错说明](docs/DEPLOYMENT.md)
+
+**当前交付状态**：部署镜像、HTTPS 代理和持久化已在隔离环境中实测；仓库不包含替你购买的服务器或域名，也没有预先分配的公开网址。
+
+## 数据与升级
+
+- 默认本地数据：`data/blog.mv.db`；可用 `BLOG_DATA_DIR` 更改目录。
+- Docker 数据：`blog-data` 命名卷；容器重建不会清除文章和历史。
+- Flyway 管理建表，Hibernate 只校验结构；H2 Console 默认关闭。
+- 测试使用独立内存库或临时文件库，不操作你的开发数据。
+- `data/`、`.env`、构建输出和依赖缓存都不会提交到 Git。
+
+**升级前先停止应用并备份数据。**已有 Git 项目使用 `git pull --ff-only`；ZIP 用户将新版解压到新目录，保留备份，再迁移旧 `data/`。不要误删旧目录中的文章。
+本次界面、认证与对比升级未修改原有数据库迁移 V1。
+
+公网更新流程与回滚注意事项见 [部署文档](docs/DEPLOYMENT.md)。不要执行 `docker compose down -v`，该命令会删除数据库卷和证书卷。
+
+## 验证与自动检查
+
+### JVM
 
 ```bash
 bash mvnw -B -ntp verify
 ```
 
-当前 JVM 基线：**84 项，0 失败、0 错误、0 跳过**。覆盖原有 CRUD/搜索分页、草稿隔离，以及 Markdown 安全、修订恢复、事务回滚、真实并发、CSRF 和迁移一致性。
+当前基线：**93 项测试，0 失败、0 错误、0 跳过**。包括原有业务、事务/并发、Markdown 安全、版本对比、认证、限流和数据库迁移。
 
-可选浏览器验收，需要 Node.js 22+：
+### 真实浏览器
+
+需要 Node.js 22+：
 
 ```bash
 cd tests/browser
@@ -70,41 +194,58 @@ npx playwright install chromium
 npm test
 ```
 
-Linux 若提示缺少系统库，按 Playwright 官方方式运行 `npx playwright install --with-deps chromium`。
-已有系统 Chromium 时，可设置 `CHROMIUM_PATH` 为其可执行文件，省去浏览器下载。
-浏览器测试会启动自己的 JVM 和临时 H2 文件库，验证预览、发布、恢复、并发编辑、删除、320/390/768/1440px 布局以及真实进程重启；不会操作开发数据库。
-默认使用测试端口 18080，可通过 `BLOG_TEST_PORT` 修改。截图和日志路径在测试输出中显示。
+Linux 缺少浏览器系统库时，按 Playwright 官方方式安装：`npx playwright install --with-deps chromium`。
+已有系统 Chromium 可设置 `CHROMIUM_PATH`；测试端口默认为 18080，可通过 `BLOG_TEST_PORT` 修改。
 
-[CI 配置](.github/workflows/verify.yml) 会在 push / PR 后执行 JVM 和浏览器验收。配置已提供，远程运行结果以 GitHub Actions 实际记录为准。
+登录模式也有独立验收。Linux / macOS 可运行：
 
-## 目录与设计
-
-```text
-src/main/java/com/example/blog/
-  config/       开发数据与请求防护
-  domain/       Post、PostStatus、PostRevision
-  repository/   文章查询与历史存取
-  service/      事务化写入、安全 Markdown 渲染
-  web/          页面、预览、表单和冲突处理
-src/main/resources/
-  db/migration/ H2 版本化建表 SQL
-  templates/    Thymeleaf 页面
-  static/       自有 CSS/JS 与本地代码高亮资源
-src/test/       JVM 测试及独立测试配置
-tests/browser/ 真实浏览器与重启验收
+```bash
+BLOG_BROWSER_AUTH=1 npm test
 ```
 
-- [关键设计与取舍](docs/ARCHITECTURE.md)：事务、快照、乐观锁、渲染边界。
-- [面试演示与理解检查](docs/DEMO.md)：6–8 分钟演示路线及需要解释的问题。
-- [验证记录与 AI 协作](docs/VALIDATION.md)：验证方式、实际困难、限制。
-- [升级计划](docs/UPGRADE.md) · [第三方资源与许可](docs/THIRD_PARTY.md) · [手机实机截图](docs/screenshots/home-mobile.png)。
+PowerShell：`$env:BLOG_BROWSER_AUTH="1"; npm test`。
+测试密码自动随机生成，不使用真实管理员账号。验收包含深浅主题、目录与进度、差异页面、320/390/768/1440px 布局、两窗口冲突和真实 JVM 重启。
 
-## 实际遇到的问题
+### 容器与 HTTPS
 
-1. **能运行 Java 却不能编译**：机器只有 JRE；补齐 Java 21 JDK，并确保 Maven 使用正确的 `JAVA_HOME`。
-2. **云端 Maven 无法解析仓库**：Maven 不自动使用 HTTPS_PROXY；在仓库外配置代理与可写缓存，保留 TLS 和依赖校验。
-3. **多窗口覆盖与历史一致性**：增加版本凭据、JPA 乐观锁、事务和数据库唯一约束；以并发测试和两标签页验收验证。
-4. **恢复可能公开旧草稿**：规定恢复一律转为草稿，保留全部历史，并测试公开地址重新返回 404。
-5. **数据重启丢失**：改为文件库、Flyway 迁移与实体校验，用真实 JVM 重启验证，测试库保持隔离。
+先完成 JAR 构建，再从仓库根目录运行：
 
-Git 保留原有初始化、CRUD、草稿、分页和搜索等阶段提交；升级按计划、Markdown、修订、持久化与界面、验收交付分阶段提交，没有改写原历史。
+```bash
+docker build -t zhixing-blog:local .
+python3 tests/deploy/verify.py
+```
+
+测试创建隔离网络、数据卷和 Caddy 测试证书，客户端显式信任生成的测试 CA，**不关闭证书或域名校验**。
+验证缺少密码拒绝启动、HTTPS、Secure cookie、认证、非 root/只读容器、健康检查和数据持久化；完成后清理自己的测试资源。
+这不等于真实域名的公网证书已申请成功。
+
+[GitHub Actions 工作流](.github/workflows/verify.yml) 执行构建、两种浏览器模式和容器 HTTPS 验收。远程运行结果以仓库 Actions 页面实际记录为准。
+
+## 常见问题
+
+| 现象 | 处理 |
+| --- | --- |
+| `mvnw.cmd` 不是内部或外部命令 | 先全部解压 ZIP，在包含 `pom.xml` 的完整项目目录启动 |
+| `java` / `javac` 找不到或 release 21 不支持 | 安装 Java 21 JDK，检查 PATH 与 JAVA_HOME 指向同一个 JDK |
+| 浏览器拒绝连接 | 等到 `Started BlogApplication`，不要关闭启动窗口；确认端口为 8080 |
+| 8080 被占用 | `bash scripts/run-dev.sh --server.port=8081`；Windows 给 JAR 命令追加同一参数 |
+| 更新后仍是旧界面 | 确认运行的是新版目录，重新构建并启动，再强制刷新浏览器 |
+| 公网模式启动失败提示密码 | 在服务器环境或 `.env` 配置自己的有效管理员密码 |
+| 公网页面可读但登录反复跳转 | 使用 HTTPS；检查可信代理的转发头，不能直接用 HTTP 访问 public 模式 |
+| 登录返回 429 | 同一 IP 一分钟最多 10 次登录请求，等待一分钟后再试 |
+| 容器不健康 | 查看 app 日志及 `/healthz`，检查数据卷权限、内存和迁移错误 |
+| 新环境没有示例文章 | 只有 dev 会初始化示例；公网空库从作者后台开始创建 |
+
+## 文档与限制
+
+- [设计与技术取舍](docs/ARCHITECTURE.md)
+- [完整部署与运维](docs/DEPLOYMENT.md)
+- [验证记录与 AI 协作](docs/VALIDATION.md)
+- [面试演示路线](docs/DEMO.md)
+- [升级过程](docs/UPGRADE.md)
+- [第三方资源与许可](docs/THIRD_PARTY.md)
+
+当前面向**单作者、单实例、小型个人博客**。H2 文件卷不能由多个应用副本同时写入；扩容前需要外部数据库与共享会话/限流方案。没有访客注册、评论、图片上传、历史压缩或自动备份。
+MySQL `prod` 仍是单独的未验收骨架，不要将 H2 的 Flyway SQL 直接用于 MySQL。
+
+Git 保留原有开发历史，升级按真实阶段提交。AI 协助实现与排查，验证证据、取舍和未覆盖范围均在文档中记录，方便作者理解和现场讲解。
