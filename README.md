@@ -185,6 +185,8 @@ docker compose up -d --build
 
 **当前交付状态**：部署镜像、HTTPS 代理和持久化已在隔离环境中实测；仓库不包含替你购买的服务器或域名，也没有预先分配的公开网址。
 
+上线后检查与已知边界见 [检查记录](docs/REVIEW.md)。
+
 ## 数据与升级
 
 - 默认本地数据：`data/blog.mv.db`；可用 `BLOG_DATA_DIR` 更改目录。
