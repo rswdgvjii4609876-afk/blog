@@ -35,7 +35,13 @@ if (previewButton) {
                 },
                 body: document.getElementById('content').value
             });
-            if (!response.ok) throw new Error('Preview failed');
+            if (response.status === 401 || response.status === 403 || response.redirected) {
+                status.textContent = '登录或安全令牌已失效，请先复制未保存内容，再在新标签页重新登录并重新打开编辑页。当前输入仍保留，请勿直接刷新。';
+                return;
+            }
+            if (!response.ok || !response.headers.get('Content-Type')?.toLowerCase().startsWith('text/html')) {
+                throw new Error('Preview failed');
+            }
             // HTML is returned only by the server's MarkdownService sanitization boundary.
             preview.innerHTML = await response.text();
             preview.hidden = false;

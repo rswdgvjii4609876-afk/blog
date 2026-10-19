@@ -63,6 +63,7 @@ async function noOverflow(page) {
         args: ['--no-sandbox']
     });
     const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
+    context.setDefaultTimeout(15000);
     const page = await context.newPage();
     const scriptErrors = [];
     context.on('page', p => p.on('pageerror', error => scriptErrors.push(error.message)));
@@ -216,7 +217,32 @@ async function noOverflow(page) {
         await page.goto(base + '/admin/posts');
         await page.waitForURL(base + '/login');
         console.log('PASS: authenticated deployment mode login, visitor isolation and logout');
+        // Keep an editor open while another tab logs out: stale CSRF must not lose text.
+        await login();
+        await page.goto(base + '/admin/posts/new');
+        await page.locator('#content').fill('登录过期也必须保留的正文');
+        const logoutTab = await context.newPage();
+        await logoutTab.goto(base + '/admin/posts');
+        await logoutTab.getByRole('button', {name: '退出登录'}).click();
+        await logoutTab.waitForURL(base + '/?signedout');
+        await page.getByRole('button', {name: '预览排版'}).click();
+        await page.waitForFunction(() => document.getElementById('preview-status').textContent.includes('重新登录'));
+        assert.equal(await page.locator('#content').inputValue(), '登录过期也必须保留的正文');
+        assert.equal(await page.locator('#markdown-preview form').count(), 0);
+        // Also guard against a followed login redirect with a misleading final HTTP 200.
+        await page.route('**/admin/markdown/preview', route => route.fulfill({
+            status: 302, headers: {location: '/login'}, body: ''
+        }));
+        await page.getByRole('button', {name: '预览排版'}).click();
+        await page.waitForFunction(() => !document.getElementById('preview-button').disabled);
+        assert((await page.locator('#preview-status').textContent()).includes('重新登录'));
+        assert.equal(await page.locator('#markdown-preview form').count(), 0);
+        assert.equal(await page.locator('#content').inputValue(), '登录过期也必须保留的正文');
+        await logoutTab.close();
+        console.log('PASS: expired-session preview and followed login redirects preserve editor content');
+
     }
+    assert.deepEqual(scriptErrors, []);
     console.log('Artifacts: ' + screenshots);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
     if (browser) await browser.close();
