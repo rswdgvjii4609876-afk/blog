@@ -355,3 +355,37 @@ button:disabled { cursor: wait; opacity: .65; }
     .compare-link { margin-left: 0; }
 }
 @media(prefers-reduced-motion:reduce) { .article-row { transition: none; } .article-row:hover { transform: none; } }
+
+/* Reader feedback shares the journal's quiet surfaces and warm accent. */
+.discussion { margin-top: 64px; padding-top: 36px; border-top: 1px solid var(--color-border); }
+.discussion .eyebrow { margin-bottom: 10px; }
+.rating-panel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; background: var(--color-muted); border: 1px solid var(--color-border); border-radius: 14px; }
+.rating-average { font-size: 48px; line-height: 1; color: var(--color-accent); font-variant-numeric: tabular-nums; }
+.muted, .feedback-hint { color: var(--color-secondary); }
+.feedback-hint { font-size: 13px; overflow-wrap: anywhere; }
+.rating-fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+.rating-fieldset legend { font-size: 14px; margin-bottom: 10px; }
+.rating-stars { display: flex; flex-wrap: wrap; gap: 8px; }
+.rating-stars label { position: relative; cursor: pointer; }
+.rating-stars input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.rating-stars label > span:first-of-type { display: block; padding: 2px 10px; font-size: 26px; border: 1px solid var(--color-border); border-radius: 7px; color: var(--color-secondary); }
+.rating-stars input:checked + span { color: var(--color-accent); border-color: var(--color-accent); background: var(--color-surface); }
+.rating-stars input:focus-visible + span { outline: 3px solid var(--color-accent); outline-offset: 3px; }
+.star-label { display: block; text-align: center; font-size: 10px; color: var(--color-secondary); }
+.comment-form { position: relative; display: grid; gap: 12px; margin: 32px 0; }
+.comment-form h3, .comment-form p { margin: 0; }
+.comment-form label { font-size: 13px; color: var(--color-secondary); }
+.comment-form input, .comment-form textarea { min-width: 0; width: 100%; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-text); }
+.comment-form textarea { resize: vertical; }
+.comment-form > button { justify-self: start; }
+.comment-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.comment-list { list-style: none; padding: 0; margin: 28px 0; }
+.reader-comment { padding: 24px 0; border-top: 1px solid var(--color-border); }
+.comment-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+.comment-meta strong { font-size: 14px; overflow-wrap: anywhere; }
+.comment-meta time { font-size: 12px; color: var(--color-tertiary); }
+.comment-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; }
+.moderation-tabs, .moderation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-block: 24px; }
+.moderation-tabs a { border: 1px solid var(--color-border); border-radius: 30px; padding: 8px 20px; font-size: 14px; }
+.moderation-tabs a[aria-current] { background: var(--color-muted); color: var(--color-accent); border-color: var(--color-accent); }
+.moderation-comment { padding: 24px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; margin-bottom: 16px; }

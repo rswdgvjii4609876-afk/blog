@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>评论审核 · 知行</title><script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}"><script defer th:src="@{/js/blog.js}"></script></head>
+<body><a class="skip-link" href="#main-content">跳到主要内容</a>
+<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><a class="nav-link" th:href="@{/}">返回博客</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
+<main id="main-content" class="site-container admin-page">
+    <div class="page-heading"><p class="eyebrow">CONVERSATIONS</p><h1>评论审核</h1><p class="page-description">让有价值的讨论留下来。新评论默认不会公开。</p></div>
+    <p class="notice notice-success" th:if="${notice}" th:text="${notice}" role="status"></p>
+    <nav class="moderation-tabs" aria-label="评论状态"><a th:each="state : ${T(com.example.blog.domain.ReaderComment.Status).values()}" th:href="@{/admin/comments(status=${state})}" th:attr="aria-current=${filterStatus == state ? 'page' : null}" th:text="${state.name() == 'PENDING' ? '待审核' : (state.name() == 'APPROVED' ? '已公开' : '已隐藏')}"></a></nav>
+    <p class="feedback-hint" th:text="|当前共 ${commentPage.totalElements} 条评论|"></p>
+    <div class="empty-state" th:unless="${commentPage.hasContent()}"><h2>这里暂时没有评论</h2><p>读者提交的评论会先进入待审核列表。</p></div>
+    <ol class="comment-list"><li class="reader-comment moderation-comment" th:each="comment : ${commentPage}">
+        <p class="feedback-hint" th:text="|文章：${comment.post.title}|"></p>
+        <div class="comment-meta"><strong th:text="${comment.nickname}"></strong><time th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}"></time></div>
+        <p class="comment-body" th:text="${comment.body}"></p>
+        <div class="moderation-actions">
+            <form method="post" th:if="${comment.status.name() != 'APPROVED'}" th:action="@{/admin/comments/{id}/approve(id=${comment.id})}"><input type="hidden" name="version" th:value="${comment.version}"><button class="button button-primary" type="submit">审核通过</button></form>
+            <form method="post" th:if="${comment.status.name() != 'HIDDEN'}" th:action="@{/admin/comments/{id}/hide(id=${comment.id})}"><input type="hidden" name="version" th:value="${comment.version}"><button class="button button-secondary" type="submit">隐藏评论</button></form>
+            <form method="post" data-confirm="确认永久删除这条评论？" th:action="@{/admin/comments/{id}/delete(id=${comment.id})}"><input type="hidden" name="version" th:value="${comment.version}"><button class="button button-danger" type="submit">永久删除</button></form>
+        </div>
+    </li></ol>
+    <nav class="pagination" aria-label="审核分页" th:if="${commentPage.totalPages > 1}"><a th:if="${commentPage.hasPrevious()}" th:href="@{/admin/comments(status=${filterStatus},page=${commentPage.number - 1})}">上一页</a><span th:text="|${commentPage.number + 1} / ${commentPage.totalPages}|"></span><a th:if="${commentPage.hasNext()}" th:href="@{/admin/comments(status=${filterStatus},page=${commentPage.number + 1})}">下一页</a></nav>
+</main></body></html>

@@ -46,6 +46,38 @@
             <div class="post-content markdown-body" th:utext="${rendered.html}">文章正文</div>
         </article>
 
+        <section id="discussion" class="discussion" th:if="${feedback != null}" aria-labelledby="discussion-title">
+            <div class="section-heading"><div><p class="eyebrow">READER NOTES</p><h2 id="discussion-title">读后，留一点回响</h2></div><span class="article-count" th:text="|${feedback.comments.totalElements} 条评论|">评论</span></div>
+            <p class="notice notice-success" th:if="${feedbackNotice}" th:text="${feedbackNotice}" role="status"></p>
+            <p class="notice" th:if="${feedbackError}" th:text="${feedbackError}" role="alert"></p>
+            <div class="rating-panel">
+                <div><span class="rating-average" th:text="${feedback.votes > 0 ? #numbers.formatDecimal(feedback.average, 1, 1) : '—'}">—</span><span class="muted"> / 5</span><p class="feedback-hint" th:text="|${feedback.votes} 份评分 · ${feedback.ownStars == null ? '你还没有评分' : '你的评分：' + feedback.ownStars + ' 星'}|"></p></div>
+                <form method="post" th:action="@{/posts/{id}/rating(id=${post.id})}">
+                    <fieldset class="rating-fieldset"><legend>这篇文章对你有帮助吗？</legend><div class="rating-stars">
+                        <label th:each="star : ${#numbers.sequence(1,5)}"><input type="radio" name="stars" th:value="${star}" th:checked="${feedback.ownStars != null and feedback.ownStars == star}" required><span aria-hidden="true">★</span><span class="star-label" th:text="|${star} 星|">星</span></label>
+                    </div></fieldset>
+                    <button class="button button-secondary" type="submit">保存评分</button>
+                </form>
+            </div>
+            <p class="feedback-hint">无需注册。使用浏览器 Cookie 记住评分，重复评分会更新；清除 Cookie 或更换设备会被视为新的访客。</p>
+            <form class="comment-form" method="post" th:action="@{/posts/{id}/comments(id=${post.id})}">
+                <h3>写下你的想法</h3><p class="feedback-hint">评论经审核后公开。请友善交流，勿填写联系方式或其他隐私。仅支持纯文本。</p>
+                <label for="comment-nickname">昵称</label><input id="comment-nickname" name="nickname" maxlength="40" required autocomplete="nickname" th:value="${commentNickname}">
+                <label for="comment-body">评论</label><textarea id="comment-body" name="body" rows="4" maxlength="2000" required placeholder="一个收获、一个问题，或一个不同的角度…" th:text="${commentBody}"></textarea>
+                <div class="comment-trap" aria-hidden="true"><label for="comment-website">Website</label><input id="comment-website" name="website" tabindex="-1" autocomplete="off"></div>
+                <button class="button button-primary" type="submit">提交评论，等待审核 ↗</button>
+            </form>
+            <ol class="comment-list" th:if="${feedback.comments.hasContent()}"><li class="reader-comment" th:each="comment : ${feedback.comments}">
+                <div class="comment-meta"><strong th:text="${comment.nickname}">昵称</strong><time th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}"></time></div><p class="comment-body" th:text="${comment.body}">评论内容</p>
+            </li></ol>
+            <p class="feedback-hint" th:unless="${feedback.comments.hasContent()}">还没有公开评论，来留下第一条读后感。</p>
+            <nav class="pagination" aria-label="评论分页" th:if="${feedback.comments.totalPages > 1}">
+                <a th:if="${feedback.comments.hasPrevious()}" th:href="@{/posts/{id}(id=${post.id},commentPage=${feedback.comments.number - 1})} + '#discussion'">上一页</a>
+                <span th:text="|${feedback.comments.number + 1} / ${feedback.comments.totalPages}|"></span>
+                <a th:if="${feedback.comments.hasNext()}" th:href="@{/posts/{id}(id=${post.id},commentPage=${feedback.comments.number + 1})} + '#discussion'">下一页</a>
+            </nav>
+        </section>
+
         <footer class="post-footer">
             <a class="back-link" th:href="@{/}">
                 <span aria-hidden="true">←</span> 返回文章列表

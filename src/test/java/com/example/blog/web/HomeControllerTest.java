@@ -54,6 +54,9 @@ class HomeControllerTest {
     @MockitoBean
     private PostRepository postRepository;
 
+    @MockitoBean
+    private com.example.blog.service.ReaderFeedbackService feedback;
+
     @Test
     void indexRendersPostsWhenPresent() throws Exception {
         var pageable = PageRequest.of(0, 5, POST_SORT);

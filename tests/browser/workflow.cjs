@@ -130,6 +130,44 @@ async function noOverflow(page) {
     assert.equal(await page.locator('.article-toc a[aria-current]').count(), 1);
     console.log('PASS: publication, safe rendering, reading progress and active article navigation');
 
+    const reader = await browser.newContext({viewport: {width: 390, height: 844}});
+    const readerPage = await reader.newPage();
+    readerPage.on('pageerror', error => scriptErrors.push(error.message));
+    await readerPage.goto(base + '/posts/' + id);
+    const readerComment = '<script>window.readerXss = 1</script> 读者的真实问题';
+    await readerPage.locator('#comment-nickname').fill('路过的读者');
+    await readerPage.locator('#comment-body').fill(readerComment);
+    await readerPage.getByRole('button', {name: '提交评论，等待审核 ↗'}).click();
+    await readerPage.getByRole('status').filter({hasText: '审核通过'}).waitFor();
+    assert.equal(await readerPage.locator('.reader-comment').count(), 0);
+    assert((await reader.request.get(base + '/admin/comments', {maxRedirects: 0})).status() === (authenticatedMode ? 302 : 200));
+    await page.goto(base + '/admin/comments');
+    const pendingComment = page.locator('.moderation-comment').filter({hasText: '路过的读者'});
+    await pendingComment.getByRole('button', {name: '审核通过'}).click();
+    await page.waitForURL(base + '/admin/comments');
+    await readerPage.reload();
+    assert.equal(await readerPage.locator('.comment-body').textContent(), readerComment);
+    assert.equal(await readerPage.evaluate(() => window.readerXss), undefined);
+    assert.equal(await readerPage.locator('.comment-body script').count(), 0);
+    for (const stars of [2, 5]) {
+        await readerPage.locator('.rating-stars label').nth(stars - 1).click();
+        await readerPage.getByRole('button', {name: '保存评分'}).click();
+        await readerPage.getByRole('status').filter({hasText: '评分已保存'}).waitFor();
+    }
+    assert.equal(await readerPage.locator('.rating-average').textContent(), '5.0');
+    assert((await readerPage.locator('.rating-panel').textContent()).includes('1 份评分'));
+    await noOverflow(readerPage);
+    await readerPage.screenshot({path: path.join(screenshots, 'discussion-mobile.png'), fullPage: true});
+    await page.goto(base + '/admin/comments?status=APPROVED');
+    await page.screenshot({path: path.join(screenshots, 'moderation-desktop.png'), fullPage: true});
+    await page.getByRole('button', {name: '隐藏评论'}).click();
+    await readerPage.reload();
+    assert.equal(await readerPage.locator('.reader-comment').count(), 0);
+    await page.goto(base + '/admin/comments?status=HIDDEN');
+    await page.getByRole('button', {name: '审核通过'}).click();
+    console.log('PASS: anonymous moderated comments, escaped content, hide/reapprove and repeat star voting');
+
+
     const stale = await context.newPage();
     await stale.goto(base + editPath);
     await page.goto(base + editPath);
@@ -177,6 +215,12 @@ async function noOverflow(page) {
     await page.locator('#status').selectOption('PUBLISHED');
     await page.getByRole('button', {name: '保存修改'}).click();
     await page.waitForURL(base + '/posts/' + id);
+    await readerPage.goto(base + '/posts/' + id);
+    assert.equal(await readerPage.locator('.comment-body').textContent(), readerComment);
+    assert.equal(await readerPage.locator('.rating-average').textContent(), '5.0');
+    assert((await readerPage.locator('.rating-panel').textContent()).includes('1 份评分'));
+    await reader.close();
+    console.log('PASS: comments and browser rating survive restart, draft restore and republication');
     const mobile = await context.newPage();
     await mobile.setViewportSize({width: 390, height: 844});
     for (const [suffix, name] of [['/', 'home-mobile'], ['/posts/' + id, 'article-mobile'], [editPath, 'editor-mobile'], [`/admin/posts/${id}/history`, 'history-mobile']]) {

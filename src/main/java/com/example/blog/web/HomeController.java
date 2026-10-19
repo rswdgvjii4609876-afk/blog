@@ -2,6 +2,9 @@ package com.example.blog.web;
 
 import com.example.blog.domain.Post;
 import com.example.blog.service.MarkdownService;
+import com.example.blog.service.ReaderFeedbackService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import com.example.blog.domain.PostStatus;
 import com.example.blog.repository.PostRepository;
 import org.springframework.data.domain.PageRequest;
@@ -24,10 +27,12 @@ public class HomeController {
 
     private final PostRepository postRepository;
     private final MarkdownService markdown;
+    private final ReaderFeedbackService feedback;
 
-    public HomeController(PostRepository postRepository, MarkdownService markdown) {
+    public HomeController(PostRepository postRepository, MarkdownService markdown, ReaderFeedbackService feedback) {
         this.postRepository = postRepository;
         this.markdown = markdown;
+        this.feedback = feedback;
     }
 
     @GetMapping("/")
@@ -59,10 +64,16 @@ public class HomeController {
     }
 
     @GetMapping("/posts/{id}")
-    public String post(@PathVariable Long id, Model model) {
+    public String post(@PathVariable Long id, @RequestParam(defaultValue = "0") int commentPage,
+                       HttpServletRequest request, HttpServletResponse response, Model model) {
         Post post = postRepository.findByIdAndStatus(id, PostStatus.PUBLISHED)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("post", post);
+        var discussion = feedback.feedback(id, ReaderIdentity.ensure(request, response), commentPage);
+        if (discussion != null && commentPage > 0 && commentPage >= discussion.comments().getTotalPages()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        model.addAttribute("feedback", discussion);
         model.addAttribute("rendered", markdown.render(post.getContent()));
         return "post";
     }
