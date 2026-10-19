@@ -60,6 +60,26 @@ class HomeControllerTest {
     private com.example.blog.service.CommunityService community;
 
     @Test
+    void moodAppearsOnlyOnFirstUnfilteredHomePage() throws Exception {
+        var home = new com.example.blog.service.CommunityService.Home(
+            new com.example.blog.service.CommunityService.Settings("欢迎", 0), List.of(), null, 0,
+            null, List.of(), 0, 0, 0);
+        when(community.home(any(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(home);
+        var post = new Post("主题", "摘要", "正文", PostStatus.PUBLISHED);
+        var first = PageRequest.of(0, 5, POST_SORT);
+        var next = PageRequest.of(1, 5, POST_SORT);
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, first)).thenReturn(new PageImpl<>(List.of(post), first, 6));
+        when(postRepository.findByStatus(PostStatus.PUBLISHED, next)).thenReturn(new PageImpl<>(List.of(post), next, 6));
+        when(postRepository.searchByStatus(PostStatus.PUBLISHED, "主题", first)).thenReturn(new PageImpl<>(List.of(post), first, 1));
+        mockMvc.perform(get("/")).andExpect(status().isOk())
+            .andExpect(content().string(containsString("id=\"mood\"")));
+        mockMvc.perform(get("/").param("page", "1")).andExpect(status().isOk())
+            .andExpect(content().string(not(containsString("id=\"mood\""))));
+        mockMvc.perform(get("/").param("q", "主题")).andExpect(status().isOk())
+            .andExpect(content().string(not(containsString("id=\"mood\""))));
+    }
+
+    @Test
     void indexRendersPostsWhenPresent() throws Exception {
         var pageable = PageRequest.of(0, 5, POST_SORT);
         var posts = IntStream.rangeClosed(1, 5)
@@ -205,7 +225,7 @@ class HomeControllerTest {
         mockMvc.perform(get("/").param("q", q).param("page", "1"))
             .andExpect(status().isOk())
             .andExpect(model().attribute("q", ""))
-            .andExpect(content().string(containsString("最新文章")))
+            .andExpect(content().string(containsString("往期文章")))
             .andExpect(content().string(containsString("href=\"/?page=0\"")))
             .andExpect(content().string(not(containsString("?q="))))
             .andExpect(content().string(not(containsString("清除搜索"))));

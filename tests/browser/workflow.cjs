@@ -71,6 +71,12 @@ async function noOverflow(page) {
     await page.goto(base);
     await noOverflow(page);
     assert.equal(await page.locator('.article-row').count(), 3);
+    assert.equal(await page.locator('.latest-feature .featured-post').count(), 1);
+    assert.equal(await page.locator('.archive-section .article-row').count(), 2);
+    const featuredBounds = await page.locator('.featured-post').boundingBox();
+    const archiveHeading = await page.locator('.archive-heading').boundingBox();
+    assert(archiveHeading.y > featuredBounds.y + featuredBounds.height, 'Archive must be below latest card');
+
     await page.screenshot({path: path.join(screenshots, 'home-desktop.png'), fullPage: true});
     const rejected = await context.request.post(base + '/admin/posts', {form: {title: 'CSRF attempt'}});
     assert.equal(rejected.status(), 403);
@@ -78,6 +84,7 @@ async function noOverflow(page) {
     await page.getByRole('button', {name: '切换浅色模式'}).click();
     await page.reload();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+    await page.screenshot({path: path.join(screenshots, 'home-light-desktop.png'), fullPage: true});
     await page.getByRole('button', {name: '切换深色模式'}).click();
     console.log('PASS: seeded homepage, CSRF rejection and persistent theme switching');
     const login = async () => {

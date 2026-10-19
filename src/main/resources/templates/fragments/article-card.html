@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<body>
+<article th:fragment="card(post, featured)" class="article-row" th:classappend="${featured} ? 'featured-post' : ''">
+    <div class="article-copy">
+        <div class="article-card-meta"><span class="latest-badge" th:if="${featured}">最新发布</span><time class="article-date" th:datetime="${post.createdAt}" th:text="${#temporals.format(post.createdAt, 'yyyy年M月d日', 'Asia/Shanghai')}"></time></div>
+        <h3 class="article-title"><a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}"></a></h3>
+        <p class="article-summary" th:text="${post.summary}"></p>
+        <p class="latest-excerpt" th:if="${featured and latestExcerpt != null}" th:text="${latestExcerpt}"></p>
+    </div>
+    <div class="article-card-footer"><a class="read-link" th:href="@{/posts/{id}(id=${post.id})}" th:attr="aria-label=|阅读全文：${post.title}|">阅读全文 <span aria-hidden="true">→</span></a></div>
+</article>
+</body>
+</html>
