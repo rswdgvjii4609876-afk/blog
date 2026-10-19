@@ -72,8 +72,10 @@ with tempfile.TemporaryDirectory(prefix=prefix) as temporary:
         docker("start", proxy)
         ca = temp / "root.crt"
         for _ in range(90):
-            result = docker("cp", proxy + ":/data/caddy/pki/authorities/local/root.crt", str(ca), check=False)
+            # docker cp cannot read tmpfs mounts on every engine; this is a public CA certificate, not its key.
+            result = docker("exec", proxy, "cat", "/data/caddy/pki/authorities/local/root.crt", check=False)
             if result.returncode == 0:
+                ca.write_text(result.stdout)
                 break
             time.sleep(1)
         else:
