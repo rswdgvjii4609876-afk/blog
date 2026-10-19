@@ -83,3 +83,13 @@ JavaScript 只增强预览、复制和离页提醒；核心的发布、编辑、
 
 `/healthz` 实际查询数据库，提供最小 readiness 信号。容器测试覆盖拒绝空凭据、受验证 HTTPS、Secure Cookie、命名卷与重启。
 部署和备份细节见 `DEPLOYMENT.md`。
+
+## 读者互动
+
+`ReaderComment` 保存昵称、纯文本、审核状态、创建时间和乐观版本；`ReaderRating` 保存匿名浏览器标识和 1～5 星。两者均通过外键关联文章，删除文章时由数据库级联删除，撤回文章时保留数据但公开入口返回 404。新增 Flyway V2，不改写历史 V1。
+
+`ReaderFeedbackService` 只允许对已发布文章写入，写入时锁定文章行；同文章评分短事务串行处理，结合 `(post_id, reader_id)` 唯一约束，避免首次并发打星重复计票。均分与总数直接从评分行聚合，不维护容易失配的累加字段。互动不修改文章版本或内容快照。
+
+评论默认 PENDING，仅 APPROVED 可公开；HIDDEN 可重新通过。管理员操作携带版本号，旧窗口不能覆盖新审核状态。公开列表和审核列表均分页，索引覆盖文章/状态/时间与审核队列。文本始终 `th:text` 转义，不走 Markdown HTML 渲染。
+
+所有修改仍使用普通 POST + CSRF。匿名标识是随机 UUID Cookie（HttpOnly / SameSite=Lax，HTTPS 下 Secure），并非账户或身份认证。服务只在有界内存中短期保留限流用 IP，不将 IP 写入评论或评分数据库。Cookie 可以清除，攻击者也能模拟多个浏览器，因此仍需人工审核，评分不具备严格防刷保证。
