@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${postPage.totalElements} + ' 篇文章 · 知行'">Blog</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -14,24 +14,29 @@
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/}" aria-current="page">首页</a>
                 <a class="nav-link" th:href="@{/admin/posts}">后台管理</a>
-            </div>
+            <form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div>
         </nav>
     </header>
 
     <main id="main-content" class="site-container home-page">
         <section class="home-hero" aria-labelledby="home-title">
             <div class="hero-main">
-                <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> LEARNING IN PUBLIC · 个人博客</p>
-                <h1 id="home-title" class="hero-title">把学到的，<br>写成<span>自己的。</span></h1>
-                <p class="hero-copy">用文字整理思考，用代码验证想法。<br>这里收藏学习中的发现，也留下解决问题的过程。</p>
-                <div class="hero-actions"><a class="button button-primary" href="#latest-title">开始阅读 <span aria-hidden="true">↗</span></a><a class="action-link" th:href="@{/admin/posts/new}">写一篇新笔记 →</a></div>
+                <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> ZHIXING JOURNAL / 独立思考，持续创造</p>
+                <h1 id="home-title" class="hero-title">不止于学会。<br><span>更要有所创造。</span></h1>
+                <p class="hero-copy">代码、思考，与那些值得留下的瞬间。<br>把走过的弯路写成笔记，把每一次迭代变成自己的积累。</p>
+                <div class="hero-actions"><a class="button button-primary" href="#latest-title">探索文章 <span aria-hidden="true">↗</span></a><a class="action-link" th:href="@{/admin/posts}">进入创作台 →</a></div>
             </div>
-            <aside class="journal-card" aria-label="博客理念">
-                <div class="journal-top"><span>THE LEARNING JOURNAL</span><span aria-hidden="true">↗</span></div>
-                <p class="journal-quote">每一次记录，<br>都是成长的证据。</p>
-                <ol class="journal-steps"><li><span>01 / 思考</span>把问题问清楚</li><li><span>02 / 实践</span>让想法跑起来</li><li><span>03 / 复盘</span>给下一次留条路</li></ol>
-                <div class="journal-bottom">知行合一 · 持续更新</div>
+            <aside class="journal-card" aria-label="个人博客创作理念">
+                <div class="journal-top"><span>BUILD. REFLECT. REPEAT.</span><span class="card-orbit" aria-hidden="true">✳︎</span></div>
+                <div class="journal-monogram" aria-hidden="true">知<span>行</span><i>01—∞</i></div>
+                <p class="journal-quote">让每次探索，<br>都有迹可循。</p>
+                <div class="journal-bottom"><span class="live-dot" aria-hidden="true"></span> A PERSONAL LEARNING ARCHIVE</div>
             </aside>
+        </section>
+        <section class="feature-strip" aria-label="阅读与创作体验">
+            <div><span class="feature-icon" aria-hidden="true">⌘</span><span><strong>写下实践</strong><small>Markdown · 代码与思考</small></span></div>
+            <div><span class="feature-icon" aria-hidden="true">↺</span><span><strong>看见迭代</strong><small>修订时间线 · 逐行对比</small></span></div>
+            <div><span class="feature-icon" aria-hidden="true">◐</span><span><strong>沉浸阅读</strong><small>深浅主题 · 目录导航</small></span></div>
         </section>
 
         <form class="search-form" action="/" th:action="@{/}" method="get" role="search">

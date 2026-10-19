@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:${BLOG_DATA_DIR:./data}/blog;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+  h2:
+    console:
+      enabled: false
+server:
+  address: 0.0.0.0
+  port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 30m
+blog:
+  admin:
+    username: ${BLOG_ADMIN_USERNAME:admin}
+    password: ${BLOG_ADMIN_PASSWORD:}

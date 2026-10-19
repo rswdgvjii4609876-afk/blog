@@ -82,6 +82,21 @@ class BlogWorkflowTest {
     }
 
     @Test
+    void comparisonEscapesSourceAndChecksRevisionOwnership() throws Exception {
+        var a = service.create("原文", "原摘要", "old", PostStatus.DRAFT, null);
+        var first = revisions.findByPostIdOrderByNumberDesc(a.getId(), PageRequest.of(0, 10)).getContent().getFirst();
+        service.update(a.getId(), a.getVersion(), "新文", "新摘要", "<script>alert(1)</script>", PostStatus.DRAFT, null);
+        String compare = "/admin/posts/" + a.getId() + "/history/" + first.getId() + "/compare";
+        mvc.perform(get(compare)).andExpect(status().isOk())
+            .andExpect(content().string(containsString("diff-added")))
+            .andExpect(content().string(containsString("&lt;script&gt;")))
+            .andExpect(content().string(not(containsString("<script>alert(1)</script>"))));
+        var b = service.create("别人的文章", "摘要", "内容", PostStatus.DRAFT, null);
+        mvc.perform(get("/admin/posts/" + b.getId() + "/history/" + first.getId() + "/compare"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void staleFormKeepsSubmittedContentAndNeverOverwritesNewerRevision() throws Exception {
         var post = service.create("原文", "摘要", "原文", PostStatus.DRAFT, null);
         service.update(post.getId(), post.getVersion(), "最新", "摘要", "已更新", PostStatus.DRAFT, null);

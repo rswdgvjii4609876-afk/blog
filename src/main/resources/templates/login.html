@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>作者登录 · 知行</title><script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><header class="site-header"><nav class="site-nav" aria-label="主导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/}">返回阅读</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
+<main class="login-layout site-container"><section class="login-story"><p class="eyebrow">THE AUTHOR'S ROOM</p><h1>让想法落笔，<br>让成长留痕。</h1><p>读者自由阅读，创作空间留给作者。</p><span class="login-decoration" aria-hidden="true">知<br>行</span></section>
+<section class="form-panel login-panel"><p class="eyebrow">WELCOME BACK / 作者入口</p><h2>继续你的创作。</h2><p class="page-description">使用部署时设置的管理员账号登录。</p>
+    <p class="notice notice-error" th:if="${param.error != null}" role="alert">账号或密码不正确，请重新输入。</p>
+    <form class="post-form" method="post" th:action="@{/login}">
+        <div class="form-field"><label for="username">账号</label><input id="username" name="username" autocomplete="username" maxlength="64" required autofocus></div>
+        <div class="form-field"><label for="password">密码</label><input id="password" type="password" name="password" autocomplete="current-password" required></div>
+        <button type="submit" class="button button-primary">进入创作台 ↗</button>
+    </form><p class="field-hint">没有访客注册入口。登录不会改变公开文章的访问方式。</p>
+</section></main></body></html>

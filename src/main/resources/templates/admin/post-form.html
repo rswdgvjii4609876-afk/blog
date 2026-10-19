@@ -6,7 +6,7 @@
     <meta name="csrf-header" th:content="${_csrf.headerName}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${postId == null ? '新建文章 · 知行' : '编辑文章 · 知行'}">新建文章 · 知行</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/vendor/highlight/github-dark.min.css}">
     <script defer th:src="@{/vendor/highlight/highlight.min.js}"></script>
     <script defer th:src="@{/js/blog.js}"></script>
@@ -20,7 +20,7 @@
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/admin/posts}">文章列表</a>
                 <a class="nav-link" th:href="@{/}">返回博客</a>
-            </div>
+            <form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div>
         </nav>
     </header>
 

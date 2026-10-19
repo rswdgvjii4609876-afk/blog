@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>文章管理 · 知行</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -14,7 +14,7 @@
             <span class="nav-context">后台管理</span>
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/}">返回博客</a>
-            </div>
+            <form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div>
         </nav>
     </header>
 
