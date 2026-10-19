@@ -1,3 +1,9 @@
+{
+    # Numeric-IP clients commonly omit SNI. Behind NAT the local socket IP differs
+    # from the public certificate's IP, so select the configured public certificate.
+    default_sni {$BLOG_DOMAIN}
+}
+
 # A public IP needs an explicit ACME issuer; the default IP policy uses a local CA.
 {$BLOG_DOMAIN} {
     tls {

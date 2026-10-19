@@ -184,3 +184,25 @@ Let’s Encrypt 已开放 IP 地址证书，要求 `shortlived` ACME profile，�
 - https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability/
 - https://letsencrypt.org/docs/profiles/#shortlived
 - https://caddyserver.com/docs/caddyfile/directives/tls#acme
+
+
+### IP 证书已签发，但浏览器出现 ERR_SSL_PROTOCOL_ERROR
+
+浏览器直接访问数字 IP 时通常不发送 TLS SNI。云服务器的本地地址又可能与公网 IP 不同，
+仅有证书不足以让 Caddy 自动选中它。IP 配置必须包含 `default_sni {$BLOG_DOMAIN}`。
+仓库已提供该设置，并通过真实不发送 SNI 的 TLS 客户端验证，证书/IP 校验保持开启。
+
+升级配置时保留 .env 和数据卷，重新创建 Caddy 以重新挂载更新的配置：
+
+```bash
+git pull --ff-only
+docker compose up -d --no-deps --force-recreate caddy
+```
+
+可在服务器本地绕过公网回环路由验证（仍校验公网 IP 证书）：
+
+```bash
+curl --noproxy '*' --connect-to 你的公网IP:443:127.0.0.1:443 -I https://你的公网IP/
+```
+
+不要用 `-k` 掩盖证书问题，也不要删除证书卷重新申请来解决选择错误。

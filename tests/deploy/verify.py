@@ -59,7 +59,10 @@ with tempfile.TemporaryDirectory(prefix=prefix) as temporary:
         assert any(issuer.get("module") == "acme" and issuer.get("profile") == "shortlived"
                    and issuer.get("ca") == "https://acme-v02.api.letsencrypt.org/directory"
                    for policy in policies for issuer in policy.get("issuers", []))
-        print("PASS: public IP explicitly requests ACME shortlived certificates (no real issuance)", flush=True)
+        servers = adapted["apps"]["http"]["servers"].values()
+        assert any(policy.get("default_sni") == "203.0.113.10" for server in servers
+                   for policy in server.get("tls_connection_policies", []))
+        print("PASS: public IP uses ACME shortlived and explicit no-SNI selection (no real issuance)", flush=True)
         # A missing credential must fail startup, rather than leave an open admin UI.
         rejected = docker("run", "--rm", image, check=False)
         assert rejected.returncode != 0 and "BLOG_ADMIN_PASSWORD" in rejected.stdout + rejected.stderr

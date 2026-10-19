@@ -60,3 +60,11 @@ AI 协助了方案、Java/模板/样式/部署实现、测试、故障定位和�
 Compose 覆盖文件也已验证：只替换一个 Caddyfile 挂载，应用端口仍不发布。
 完整隔离容器 HTTPS、认证、备份与持久化验收再次通过。
 此检查不对用户的真实公网 IP 发起证书订单，实际签发仍需目标主机开放验证端口后确认。
+
+
+## IP 无 SNI 握手回归
+
+复现了公网 IP 证书已签发但握手仍报 TLS internal error 的情况：客户端不发送 SNI、
+且 TLS 代理的容器地址与证书公网 IP 不一致。补充 default_sni 后，
+通过严格校验证书 IP SAN 的 OpenSSL 客户端建立 TLS 并收到 HTTP 200。
+`tests/deploy/ip_handshake.py` 使用临时 CA，不关闭证书验证，也不发起真实 ACME 订单。
