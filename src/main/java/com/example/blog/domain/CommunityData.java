@@ -39,6 +39,8 @@ public final class CommunityData {
         @Column(name="active_slot",unique=true) private Integer activeSlot;
         @Column(name="created_at",nullable=false) private java.time.Instant createdAt;
         @Version private long version;
+        @Column(name="ends_at") private java.time.Instant endsAt;
+        @Column(name="other_enabled",nullable=false) private boolean otherEnabled;
         protected ReaderPoll() { }
     }
     @Entity @Table(name="poll_votes", uniqueConstraints=@UniqueConstraint(columnNames={"poll_id","reader_id"}))
@@ -47,6 +49,8 @@ public final class CommunityData {
         @Column(name="poll_id",nullable=false) private Long pollId;
         @Column(name="reader_id",nullable=false,length=36) private String readerId;
         @Column(name="option_index",nullable=false) private int optionIndex;
+        @Column(name="is_other",nullable=false) private boolean isOther;
+        @Column(name="other_text",length=300) private String otherText;
         protected PollVote() { }
     }
 }

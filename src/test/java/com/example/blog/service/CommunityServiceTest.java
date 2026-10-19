@@ -48,7 +48,7 @@ class CommunityServiceTest {
         assertThat(result.options().getFirst().votes()).isEqualTo(1);
         assertThatThrownBy(()->service.vote(poll.id(),reader,2)).hasMessageContaining("400");
         service.closePoll(poll.id(),poll.version());
-        assertThat(service.home(reader,0).poll()).isNull();
+        assertThat(service.home(reader,0).poll().open()).isFalse();
         assertThatThrownBy(()->service.vote(poll.id(),reader,0)).hasMessageContaining("409");
         service.createPoll("下一次","甲\n乙");
         assertThat(service.poll(poll.id(),null).votes()).isEqualTo(2);

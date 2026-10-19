@@ -13,6 +13,23 @@ class DatabaseMigrationTest {
     @Autowired JdbcTemplate jdbc;
 
     @Test
+    void v4PreservesLegacyPollDeadlineAndExistingVotes() throws Exception {
+        try (var dataSource = new com.zaxxer.hikari.HikariDataSource()) {
+            dataSource.setJdbcUrl("jdbc:h2:mem:timed-poll-upgrade;DB_CLOSE_DELAY=-1"); dataSource.setUsername("sa");
+            org.flywaydb.core.Flyway.configure().dataSource(dataSource).target("3").load().migrate();
+            var db = new JdbcTemplate(dataSource);
+            db.update("insert into reader_polls(question,options,active_slot,created_at,version) values('旧投票',?,1,CURRENT_TIMESTAMP,0)", "甲\n乙");
+            db.update("insert into poll_votes(poll_id,reader_id,option_index) values(1,?,1)",java.util.UUID.randomUUID().toString());
+            org.flywaydb.core.Flyway.configure().dataSource(dataSource).load().migrate();
+            assertThat(db.queryForObject("select ends_at from reader_polls where id=1",java.time.OffsetDateTime.class)).isNull();
+            assertThat(db.queryForObject("select other_enabled from reader_polls where id=1",Boolean.class)).isFalse();
+            assertThat(db.queryForObject("select option_index from poll_votes where poll_id=1",Integer.class)).isEqualTo(1);
+            assertThat(db.queryForObject("select is_other from poll_votes where poll_id=1",Boolean.class)).isFalse();
+            assertThat(db.queryForObject("select other_text from poll_votes where poll_id=1",String.class)).isNull();
+        }
+    }
+
+    @Test
     void upgradeFromV1PreservesArticlesAndCreatesCascadingFeedbackTables() {
         try (var dataSource = new com.zaxxer.hikari.HikariDataSource()) {
             dataSource.setJdbcUrl("jdbc:h2:mem:reader-upgrade;DB_CLOSE_DELAY=-1");

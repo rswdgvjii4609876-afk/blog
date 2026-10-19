@@ -26,13 +26,17 @@ public class CommunityService {
     public record MoodCount(Mood mood, long count) { }
     public record Message(long id, String nickname, String body, String reply, String status, Instant createdAt, long version) { }
     public record Option(int index, String label, long votes) { }
-    public record Poll(long id, String question, List<Option> options, long votes, Integer ownChoice, long version, boolean open) { }
+    public static final int OTHER_OPTION = 6;
+    public record Poll(long id, String question, List<Option> options, long votes, Integer ownChoice,
+                       long version, boolean open, Instant endsAt, boolean otherEnabled, boolean current, Instant serverNow) { }
+    public record OtherResponse(long id, String body) { }
     public record Home(Settings settings, List<MoodCount> moods, Mood ownMood, long moodTotal,
                        Poll poll, List<Message> messages, long messageCount, int messagePage, int messagePages) { }
     public record Dashboard(long posts, long published, long pendingComments, long pendingMessages,
                             long ratings, Double average, Home home, List<Poll> polls) { }
     private final JdbcTemplate jdbc;
-    public CommunityService(JdbcTemplate jdbc) { this.jdbc=jdbc; }
+    private final Clock clock;
+    public CommunityService(JdbcTemplate jdbc, Clock clock) { this.jdbc=jdbc; this.clock=clock; }
     @PostConstruct void seedSettings() {
         // V3 seeds production. Hibernate-created isolated test schemas also need the singleton.
         try { jdbc.update("insert into site_settings(id,welcome,version) values(1,?,0)", DEFAULT_WELCOME); }
@@ -53,9 +57,12 @@ public class CommunityService {
         int pages=(int)((total+9)/10);
         if(page>0 && page>=pages) throw error(HttpStatus.NOT_FOUND);
         var messages=messages("APPROVED",page);
-        var active=jdbc.queryForList("select id from reader_polls where active_slot=1",Long.class);
+        var latest=jdbc.queryForList("select id from reader_polls order by id desc limit 1",Long.class);
+        Poll visible = latest.isEmpty() ? null : poll(latest.getFirst(),reader);
+        // Old manually closed polls retain their previous hidden-home behavior.
+        if (visible != null && !visible.current() && visible.endsAt() == null) visible = null;
         return new Home(settings(),moods,own.isEmpty()?null:Mood.valueOf(own.getFirst()),
-            counts.values().stream().mapToLong(Long::longValue).sum(),active.isEmpty()?null:poll(active.getFirst(),reader),
+            counts.values().stream().mapToLong(Long::longValue).sum(),visible,
             messages,total,page,pages);
     }
     @Transactional public void welcome(String welcome,long version) {
@@ -92,37 +99,84 @@ public class CommunityService {
             default -> throw error(HttpStatus.BAD_REQUEST);
         }
     }
+    /** Compatibility for internal callers: new polls always default to 24 hours. */
     @Transactional public void createPoll(String question,String optionLines) {
+        createPoll(question, Arrays.stream(text(optionLines,1000).split("\\R")).map(String::strip).filter(v->!v.isEmpty()).toList(),24,false);
+    }
+    @Transactional public void createPoll(String question,List<String> input,long hours,boolean otherEnabled) {
         String title=text(question,160);
-        var options=Arrays.stream(text(optionLines,1000).split("\\R")).map(String::strip).filter(s->!s.isEmpty()).toList();
-        if(options.size()<2 || options.size()>6 || new HashSet<>(options).size()!=options.size() || options.stream().anyMatch(s->s.length()>80)) throw error(HttpStatus.BAD_REQUEST);
+        duration(hours);
+        if(input==null || input.size()<2 || input.size()>6) throw error(HttpStatus.BAD_REQUEST);
+        var options=input.stream().map(value->text(value,80)).toList();
+        if(new HashSet<>(options).size()!=options.size() || options.stream().anyMatch(value->value.contains("\n") || value.contains("\r"))) throw error(HttpStatus.BAD_REQUEST);
         lockSettings();
-        if(count("select count(*) from reader_polls where active_slot=1")>0) throw error(HttpStatus.CONFLICT);
-        jdbc.update("insert into reader_polls(question,options,active_slot,created_at,version) values(?,?,1,?,0)",title,String.join("\n",options),OffsetDateTime.now(ZoneOffset.UTC));
+        var active=jdbc.queryForList("select id from reader_polls where active_slot=1 for update",Long.class);
+        if(!active.isEmpty()) {
+            Poll previous=poll(active.getFirst(),null);
+            if(previous.open()) throw error(HttpStatus.CONFLICT);
+            jdbc.update("update reader_polls set active_slot=null,version=version+1 where id=?",previous.id());
+        }
+        Instant now=clock.instant();
+        jdbc.update("insert into reader_polls(question,options,active_slot,created_at,version,ends_at,other_enabled) values(?,?,1,?,0,?,?)",
+            title,String.join("\n",options),OffsetDateTime.ofInstant(now,ZoneOffset.UTC),OffsetDateTime.ofInstant(now.plusSeconds(hours*3600),ZoneOffset.UTC),otherEnabled);
     }
     @Transactional public void closePoll(long id,long version) {
         lockSettings();
         if(jdbc.update("update reader_polls set active_slot=null,version=version+1 where id=? and version=? and active_slot=1",id,version)!=1) throw error(HttpStatus.CONFLICT);
     }
-    @Transactional public void vote(long pollId,String reader,int option) {
-        reader(reader);
-        var rows=jdbc.queryForList("select options from reader_polls where id=? and active_slot=1 for update",String.class,pollId);
+    @Transactional public void extendPoll(long id,long version,long hours) {
+        duration(hours); lockSettings();
+        var rows=jdbc.queryForList("select id from reader_polls where id=? and active_slot=1 for update",Long.class,id);
         if(rows.isEmpty()) throw error(HttpStatus.CONFLICT);
-        if(option<0 || option>=rows.getFirst().split("\n").length) throw error(HttpStatus.BAD_REQUEST);
-        int updated=jdbc.update("update poll_votes set option_index=? where poll_id=? and reader_id=?",option,pollId,reader);
-        if(updated==0) jdbc.update("insert into poll_votes(poll_id,reader_id,option_index) values(?,?,?)",pollId,reader,option);
+        Poll current=poll(id,null);
+        if(current.version()!=version || current.endsAt()==null) throw error(HttpStatus.CONFLICT);
+        Instant now=clock.instant();
+        Instant base=current.endsAt().isAfter(now)?current.endsAt():now;
+        jdbc.update("update reader_polls set ends_at=?,version=version+1 where id=?",OffsetDateTime.ofInstant(base.plusSeconds(hours*3600),ZoneOffset.UTC),id);
     }
+    @Transactional public void vote(long pollId,String reader,int option) { vote(pollId,reader,option,null); }
+    @Transactional public void vote(long pollId,String reader,int option,String otherText) {
+        reader(reader);
+        var rows=jdbc.queryForList("select id from reader_polls where id=? and active_slot=1 for update",Long.class,pollId);
+        if(rows.isEmpty()) throw error(HttpStatus.CONFLICT);
+        // Check the server clock AFTER acquiring the lock, including at the exact deadline.
+        Poll current=poll(pollId,null);
+        if(!current.open()) throw error(HttpStatus.CONFLICT);
+        int normalOptions=current.options().size()-(current.otherEnabled()?1:0);
+        boolean other=option==OTHER_OPTION;
+        if(other ? !current.otherEnabled() : option<0 || option>=normalOptions) throw error(HttpStatus.BAD_REQUEST);
+        String privateText=other?text(otherText,300):null;
+        int stored=other?0:option;
+        int updated=jdbc.update("update poll_votes set option_index=?,is_other=?,other_text=? where poll_id=? and reader_id=?",stored,other,privateText,pollId,reader);
+        if(updated==0) jdbc.update("insert into poll_votes(poll_id,reader_id,option_index,is_other,other_text) values(?,?,?,?,?)",pollId,reader,stored,other,privateText);
+    }
+    /** Public projection intentionally contains no free-text vote responses, even the reader's own. */
     public Poll poll(long id,String reader) {
-        var own=reader==null ? List.<Integer>of() : jdbc.queryForList("select option_index from poll_votes where poll_id=? and reader_id=?",Integer.class,id,reader);
+        if(count("select count(*) from reader_polls where id=?",id)==0) throw error(HttpStatus.NOT_FOUND);
+        var own=reader==null ? List.<Integer>of() : jdbc.queryForList("select case when is_other then 6 else option_index end from poll_votes where poll_id=? and reader_id=?",Integer.class,id,reader);
         Map<Integer,Long> counts=new HashMap<>();
-        jdbc.query("select option_index,count(*) from poll_votes where poll_id=? group by option_index",r->{counts.put(r.getInt(1),r.getLong(2));},id);
+        jdbc.query("select case when is_other then 6 else option_index end as choice,count(*) from poll_votes where poll_id=? group by choice",r->{counts.put(r.getInt(1),r.getLong(2));},id);
         return jdbc.queryForObject("select * from reader_polls where id=?",(r,n)->{
             String[] labels=r.getString("options").split("\n"); var options=new ArrayList<Option>();
             for(int i=0;i<labels.length;i++) options.add(new Option(i,labels[i],counts.getOrDefault(i,0L)));
+            boolean enabled=r.getBoolean("other_enabled");
+            if(enabled) options.add(new Option(OTHER_OPTION,"其他",counts.getOrDefault(OTHER_OPTION,0L)));
+            var end=r.getObject("ends_at",OffsetDateTime.class);
+            Instant endsAt=end==null?null:end.toInstant();
+            Instant now=clock.instant();
+            boolean current=r.getObject("active_slot")!=null;
             return new Poll(id,r.getString("question"),options,counts.values().stream().mapToLong(Long::longValue).sum(),
-                own.isEmpty()?null:own.getFirst(),r.getLong("version"),r.getObject("active_slot")!=null);
+                own.isEmpty()?null:own.getFirst(),r.getLong("version"),current && (endsAt==null || now.isBefore(endsAt)),endsAt,enabled,current,now);
         },id);
     }
+    public List<OtherResponse> otherResponses(long id,int page) {
+        page(page);
+        if(count("select count(*) from reader_polls where id=?",id)==0) throw error(HttpStatus.NOT_FOUND);
+        return jdbc.query("select id,other_text from poll_votes where poll_id=? and is_other=true order by id desc limit 10 offset ?",
+            (r,n)->new OtherResponse(r.getLong(1),r.getString(2)),id,page*10);
+    }
+    public long otherResponseCount(long id) { return count("select count(*) from poll_votes where poll_id=? and is_other=true",id); }
+    private void duration(long hours) { if(hours<1 || hours>8760) throw error(HttpStatus.BAD_REQUEST); }
     public Dashboard dashboard() {
         return new Dashboard(count("select count(*) from posts"),count("select count(*) from posts where status='PUBLISHED'"),
             count("select count(*) from reader_comments where status='PENDING'"),messageCount("PENDING"),
