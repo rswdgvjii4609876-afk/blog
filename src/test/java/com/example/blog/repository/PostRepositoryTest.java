@@ -17,6 +17,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @DataJpaTest
 class PostRepositoryTest {
 

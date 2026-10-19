@@ -9,7 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:seed-test;DB_CLOSE_DELAY=-1")
 @ActiveProfiles("dev")
 class BlogApplicationTests {
 

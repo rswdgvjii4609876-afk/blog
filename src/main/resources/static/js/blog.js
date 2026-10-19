@@ -29,7 +29,10 @@ if (previewButton) {
         status.textContent = '正在生成预览…';
         try {
             const response = await fetch(previewButton.dataset.url, {
-                method: 'POST', headers: {'Content-Type': 'text/plain;charset=UTF-8'},
+                method: 'POST', headers: {
+                    'Content-Type': 'text/plain;charset=UTF-8',
+                    [document.querySelector('meta[name="csrf-header"]').content]: document.querySelector('meta[name="csrf-token"]').content
+                },
                 body: document.getElementById('content').value
             });
             if (!response.ok) throw new Error('Preview failed');
@@ -43,3 +46,22 @@ if (previewButton) {
         finally { previewButton.disabled = false; }
     });
 }
+
+// Do not persist private drafts in localStorage; warn before leaving unsaved edits instead.
+const editor = document.querySelector('.post-form');
+if (editor) {
+    const baseline = new URLSearchParams(new FormData(editor)).toString();
+    let submitting = false;
+    editor.addEventListener('submit', () => { submitting = true; });
+    window.addEventListener('beforeunload', event => {
+        if (!submitting && new URLSearchParams(new FormData(editor)).toString() !== baseline) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+}
+document.querySelectorAll('form[data-confirm]').forEach(form => {
+    form.addEventListener('submit', event => {
+        if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+    });
+});

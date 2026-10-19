@@ -7,4 +7,15 @@ spring:
     open-in-view: false
 
 server:
+  address: 127.0.0.1
   port: 8080
+  error:
+    include-message: never
+    include-stacktrace: never
+  tomcat:
+    max-http-form-post-size: 2MB
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: strict

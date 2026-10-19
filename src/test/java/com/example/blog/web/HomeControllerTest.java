@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@org.springframework.context.annotation.Import(com.example.blog.service.MarkdownService.class)
+@org.springframework.context.annotation.Import({com.example.blog.service.MarkdownService.class, com.example.blog.config.SecurityConfig.class})
 @WebMvcTest(HomeController.class)
 class HomeControllerTest {
 
@@ -66,7 +66,7 @@ class HomeControllerTest {
         var result = mockMvc.perform(get("/"))
             .andExpect(status().isOk())
             .andExpect(view().name("index"))
-            .andExpect(content().string(containsString("Blog")))
+            .andExpect(content().string(containsString("知行")))
             .andExpect(model().attribute("q", ""))
             .andExpect(content().string(containsString("action=\"/\" method=\"get\"")))
             .andExpect(content().string(containsString("type=\"search\" name=\"q\"")))

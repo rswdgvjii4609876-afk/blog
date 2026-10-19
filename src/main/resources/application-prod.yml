@@ -1,10 +1,14 @@
+# Optional skeleton only. H2 migrations are not portable to MySQL.
+# Supply a TLS-verified JDBC URL and prepare the schema before enabling this profile.
 spring:
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:blog}?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
+    url: ${DB_URL}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME:blog}
-    password: ${DB_PASSWORD:}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+  flyway:
+    enabled: false

@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>文章管理 · Blog</title>
+    <title>文章管理 · 知行</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header">
         <nav class="site-nav" aria-label="后台导航">
-            <a class="brand" th:href="@{/}">Blog</a>
+            <a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a>
             <span class="nav-context">后台管理</span>
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/}">返回博客</a>
@@ -17,7 +18,8 @@
         </nav>
     </header>
 
-    <main class="site-container admin-page">
+    <main id="main-content" class="site-container admin-page">
+        <p class="notice notice-success" th:if="${notice}" th:text="${notice}" role="status"></p>
         <section class="admin-heading" aria-labelledby="admin-title">
             <div class="page-heading">
                 <p class="eyebrow">后台文章管理</p>
@@ -47,17 +49,14 @@
                             <p class="admin-item-summary" th:text="${post.summary}">摘要</p>
                             <p class="admin-item-date">
                                 <span class="status-badge" th:text="${post.status == T(com.example.blog.domain.PostStatus).PUBLISHED ? '已发布' : '草稿'}">状态</span>
-                                <time th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</time>
+                                <time th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}">时间</time>
                             </p>
                         </div>
                         <nav class="admin-actions" aria-label="文章操作">
                             <a class="action-link" th:if="${post.status == T(com.example.blog.domain.PostStatus).PUBLISHED}" th:href="@{/posts/{id}(id=${post.id})}">查看</a>
                             <a class="button button-secondary" th:href="@{/admin/posts/{id}/edit(id=${post.id})}">编辑</a>
                             <a class="action-link" th:href="@{/admin/posts/{id}/history(id=${post.id})}">修订记录</a>
-                            <form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}">
-                                <input type="hidden" name="version" th:value="${post.version}">
-                                <button class="button button-danger" type="submit">删除</button>
-                            </form>
+                            <a class="button button-danger" th:href="@{/admin/posts/{id}/delete(id=${post.id})}">删除</a>
                         </nav>
                     </article>
                 </li>
@@ -79,7 +78,7 @@
     </main>
 
     <footer class="site-footer">
-        <div class="site-container footer-inner">Blog · 后台管理</div>
+        <div class="site-container footer-inner">知行 · 写下思考，留下成长</div>
     </footer>
 </body>
 </html>

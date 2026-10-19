@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class AdminPostController {
@@ -83,13 +84,15 @@ public class AdminPostController {
     @PostMapping("/admin/posts")
     public String createPost(
         @Valid @ModelAttribute("postForm") PostForm postForm,
-        BindingResult bindingResult
+        BindingResult bindingResult,
+        RedirectAttributes redirect
     ) {
         if (bindingResult.hasErrors()) {
             return "admin/post-form";
         }
         Post saved = postService.create(postForm.getTitle(), postForm.getSummary(), postForm.getContent(),
             postForm.getStatus(), postForm.getChangeNote());
+        redirect.addFlashAttribute("notice", saved.getStatus() == PostStatus.PUBLISHED ? "文章已发布。" : "草稿已保存。继续完善，再与世界分享。");
         return saved.getStatus() == PostStatus.PUBLISHED
             ? "redirect:/posts/" + saved.getId()
             : "redirect:/admin/posts";
@@ -100,7 +103,8 @@ public class AdminPostController {
         @PathVariable Long id,
         @Valid @ModelAttribute("postForm") PostForm postForm,
         BindingResult bindingResult,
-        Model model
+        Model model,
+        RedirectAttributes redirect
     ) {
         if (postForm.getVersion() == null || postForm.getVersion() < 0) {
             bindingResult.rejectValue("version", "missing", "编辑凭据已失效，请重新打开文章编辑页");
@@ -113,20 +117,33 @@ public class AdminPostController {
         try {
             post = postService.update(id, postForm.getVersion(), postForm.getTitle(), postForm.getSummary(),
                 postForm.getContent(), postForm.getStatus(), postForm.getChangeNote());
+        } catch (org.springframework.dao.OptimisticLockingFailureException concurrentWrite) {
+            bindingResult.rejectValue("version", "conflict", "保存期间文章发生变化。请保留输入，在新窗口查看最新内容后重新编辑。");
+            model.addAttribute("postId", id);
+            return "admin/post-form";
         } catch (ResponseStatusException conflict) {
             if (conflict.getStatusCode() != HttpStatus.CONFLICT) throw conflict;
             bindingResult.rejectValue("version", "conflict", conflict.getReason());
             model.addAttribute("postId", id);
             return "admin/post-form";
         }
+        redirect.addFlashAttribute("notice", "修改已保存，并已记录到文章成长时间线。");
         return post.getStatus() == PostStatus.PUBLISHED
             ? "redirect:/posts/" + id
             : "redirect:/admin/posts";
     }
 
+    @GetMapping("/admin/posts/{id}/delete")
+    public String confirmDelete(@PathVariable Long id, Model model) {
+        model.addAttribute("post", postRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
+        return "admin/delete";
+    }
+
     @PostMapping("/admin/posts/{id}/delete")
-    public String deletePost(@PathVariable Long id, @RequestParam long version) {
+    public String deletePost(@PathVariable Long id, @RequestParam long version, RedirectAttributes redirect) {
         postService.delete(id, version);
+        redirect.addFlashAttribute("notice", "文章及其修订记录已删除。");
         return "redirect:/admin/posts";
     }
 }

@@ -2,17 +2,20 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" th:content="${_csrf.token}">
+    <meta name="csrf-header" th:content="${_csrf.headerName}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${postId == null ? '新建文章 · Blog' : '编辑文章 · Blog'}">新建文章 · Blog</title>
+    <title th:text="${postId == null ? '新建文章 · 知行' : '编辑文章 · 知行'}">新建文章 · 知行</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/vendor/highlight/github-dark.min.css}">
     <script defer th:src="@{/vendor/highlight/highlight.min.js}"></script>
     <script defer th:src="@{/js/blog.js}"></script>
 </head>
 <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header">
         <nav class="site-nav" aria-label="后台导航">
-            <a class="brand" th:href="@{/}">Blog</a>
+            <a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a>
             <span class="nav-context">后台管理</span>
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/admin/posts}">文章列表</a>
@@ -21,8 +24,9 @@
         </nav>
     </header>
 
-    <main class="site-container form-page">
+    <main id="main-content" class="site-container form-page">
         <section class="form-panel" aria-labelledby="form-title">
+            <p class="notice notice-success" th:if="${param.restored != null}" role="status">历史内容已恢复为草稿。请确认内容，再决定是否发布。</p>
             <header class="form-heading">
                 <h1 id="form-title" th:text="${postId == null ? '新建文章' : '编辑文章'}">新建文章</h1>
                 <p class="page-description" th:text="${postId == null ? '创建文章，保存为草稿或直接发布' : '修改文章内容和状态并保存'}">创建文章，保存为草稿或直接发布</p>
@@ -82,7 +86,7 @@
     </main>
 
     <footer class="site-footer">
-        <div class="site-container footer-inner">Blog · 后台管理</div>
+        <div class="site-container footer-inner">知行 · 写下思考，留下成长</div>
     </footer>
 </body>
 </html>

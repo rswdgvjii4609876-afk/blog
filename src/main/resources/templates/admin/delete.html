@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>确认删除 · 知行</title><link rel="stylesheet" th:href="@{/css/style.css}"></head>
+<body><header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a></div></nav></header>
+<main class="site-container form-page"><section class="form-panel"><p class="eyebrow">删除确认</p><h1>确定告别这篇文章？</h1><h2 class="delete-title" th:text="${post.title}"></h2><p class="page-description">文章和全部修订记录将永久删除，无法从成长记录中恢复。如只是不想公开，请取消并将文章改为草稿。</p>
+<form method="post" th:action="@{/admin/posts/{id}/delete(id=${post.id})}"><input type="hidden" name="version" th:value="${post.version}"><div class="form-actions"><a class="button button-secondary" th:href="@{/admin/posts}">取消，保留文章</a><button class="button button-danger" type="submit">确认永久删除</button></div></form>
+</section></main></body></html>

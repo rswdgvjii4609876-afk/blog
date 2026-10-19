@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${post.title} + ' · Blog'">文章详情 · Blog</title>
+    <title th:text="${post.title} + ' · 知行'">文章详情 · 知行</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/vendor/highlight/github-dark.min.css}">
     <script defer th:src="@{/vendor/highlight/highlight.min.js}"></script>
     <script defer th:src="@{/js/blog.js}"></script>
 </head>
 <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header">
         <nav class="site-nav" aria-label="主导航">
-            <a class="brand" th:href="@{/}">Blog</a>
+            <a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a>
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/}">首页</a>
                 <a class="nav-link" th:href="@{/admin/posts}">后台管理</a>
@@ -20,7 +21,8 @@
         </nav>
     </header>
 
-    <main class="reading-shell">
+    <main id="main-content" class="reading-shell">
+        <p class="notice notice-success" th:if="${notice}" th:text="${notice}" role="status"></p>
         <a class="back-link" th:href="@{/}">
             <span aria-hidden="true">←</span> 返回文章列表
         </a>
@@ -29,7 +31,8 @@
             <header class="post-heading">
                 <h1 class="post-title" th:text="${post.title}">文章标题</h1>
                 <p class="post-summary" th:text="${post.summary}">文章摘要</p>
-                <p class="post-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">创建时间</p>
+                <p class="post-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}">创建时间</p>
+                <p class="post-date" th:if="${post.version > 0}" th:text="|最后修订于 ${#temporals.format(post.updatedAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}|"></p>
             </header>
 
             <div class="post-divider" aria-hidden="true"></div>

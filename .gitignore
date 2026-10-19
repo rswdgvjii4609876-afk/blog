@@ -48,3 +48,11 @@ logs/
 application-local.properties
 application-dev.properties
 server*.log
+
+# Local H2 data and browser test output
+data/
+*.mv.db
+*.trace.db
+playwright-report/
+test-results/
+node_modules/

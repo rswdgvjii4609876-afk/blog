@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${postPage.totalElements} + ' 篇文章 · Blog'">Blog</title>
+    <title th:text="${postPage.totalElements} + ' 篇文章 · 知行'">Blog</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header">
         <nav class="site-nav" aria-label="主导航">
-            <a class="brand" th:href="@{/}">Blog</a>
+            <a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a>
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/}" aria-current="page">首页</a>
                 <a class="nav-link" th:href="@{/admin/posts}">后台管理</a>
@@ -17,11 +18,20 @@
         </nav>
     </header>
 
-    <main class="site-container home-page">
+    <main id="main-content" class="site-container home-page">
         <section class="home-hero" aria-labelledby="home-title">
-            <p class="eyebrow">个人博客</p>
-            <h1 id="home-title" class="hero-title">记录学习、代码与成长。</h1>
-            <p class="hero-copy">分享开发实践、学习笔记，以及一路解决的问题。</p>
+            <div class="hero-main">
+                <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> LEARNING IN PUBLIC · 个人博客</p>
+                <h1 id="home-title" class="hero-title">把学到的，<br>写成<span>自己的。</span></h1>
+                <p class="hero-copy">用文字整理思考，用代码验证想法。<br>这里收藏学习中的发现，也留下解决问题的过程。</p>
+                <div class="hero-actions"><a class="button button-primary" href="#latest-title">开始阅读 <span aria-hidden="true">↗</span></a><a class="action-link" th:href="@{/admin/posts/new}">写一篇新笔记 →</a></div>
+            </div>
+            <aside class="journal-card" aria-label="博客理念">
+                <div class="journal-top"><span>THE LEARNING JOURNAL</span><span aria-hidden="true">↗</span></div>
+                <p class="journal-quote">每一次记录，<br>都是成长的证据。</p>
+                <ol class="journal-steps"><li><span>01 / 思考</span>把问题问清楚</li><li><span>02 / 实践</span>让想法跑起来</li><li><span>03 / 复盘</span>给下一次留条路</li></ol>
+                <div class="journal-bottom">知行合一 · 持续更新</div>
+            </aside>
         </section>
 
         <form class="search-form" action="/" th:action="@{/}" method="get" role="search">
@@ -41,12 +51,13 @@
 
             <div th:if="${postPage.hasContent()}" class="article-list">
                 <article th:each="post : ${posts}" class="article-row">
+                    <span class="article-number" aria-hidden="true" th:text="${#numbers.formatInteger(postPage.number * postPage.size + postStat.count, 2)}">01</span>
                     <div class="article-copy">
                         <h3 class="article-title">
                             <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">标题</a>
                         </h3>
                         <p class="article-summary" th:text="${post.summary}">摘要</p>
-                        <p class="article-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">时间</p>
+                        <p class="article-date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm', 'Asia/Shanghai')}">时间</p>
                     </div>
                     <a class="read-link" th:href="@{/posts/{id}(id=${post.id})}">
                         阅读全文 <span aria-hidden="true">→</span>
@@ -70,7 +81,7 @@
     </main>
 
     <footer class="site-footer">
-        <div class="site-container footer-inner">Blog</div>
+        <div class="site-container footer-inner">知行 · 写下思考，留下成长</div>
     </footer>
 </body>
 </html>
