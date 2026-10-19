@@ -23,6 +23,14 @@ Java 21 **JDK** · Spring Boot 4.1.1 · Spring MVC · Thymeleaf · JPA/Hibernate
 
 先确认 `java -version` 和 `javac -version` 都为 21。仅有 Java 运行时无法编译。首次构建需要访问 Maven Central。
 
+### 一键检查并启动
+
+Windows 双击仓库根目录的 `start.cmd`；Linux / macOS 运行 `bash start.sh`。
+脚本会先运行测试并重新构建，再启动当前代码，避免误用旧 JAR。
+首次运行需要联网下载依赖。启动后保持终端窗口打开，在浏览器打开 `http://localhost:8080`。
+
+也可以按下面步骤分别构建和启动。
+
 Linux / macOS：
 
 ```bash
