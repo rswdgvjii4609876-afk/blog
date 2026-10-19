@@ -32,6 +32,8 @@ curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-connrefused
     --max-time 10 "$site_url/healthz" > "$backup_dir/health.json"
 python3 - "$site_url" "$backup_dir" <<'PY'
 import json,re,sys,urllib.request
+# Avoid Ubuntu apport masking the original check failure for stdin scripts.
+sys.excepthook = sys.__excepthook__
 from html import unescape
 from pathlib import Path
 base,backup=sys.argv[1].rstrip('/'),Path(sys.argv[2])
@@ -43,15 +45,29 @@ health=json.loads((backup/'health.json').read_text())
 assert health.get('status')=='UP','健康检查未返回 UP'
 url,home=get('/')
 assert '砒霜与蜜糖、美味与毒药' in home,'首页未发现最新随笔，请先执行公众号文章导入'
+expected={entry['title']:entry['source'] for entry in json.loads(Path('content/essays/manifest.json').read_text())}
 seen=set()
+found=set()
+legacy=[]
 for page in range(2):
     _,html=get('/' if page==0 else '/?page=1')
     for path in re.findall(r'href="(/posts/\d+)"',html):
-        if path not in seen:
-            _,body=get(path)
-            assert '微信公众号原文' in body,'文章缺少来源链接：'+path
-            seen.add(path)
-assert len(seen)>=6,'两页中不足六篇文章，请检查发布状态'
+        if path in seen:
+            continue
+        seen.add(path)
+        _,body=get(path)
+        heading=re.search(r'<h1\b[^>]*>(.*?)</h1>',body,re.S)
+        assert heading, '文章详情缺少标题：'+path
+        title=unescape(re.sub(r'<[^>]+>','',heading.group(1))).strip()
+        if title in expected:
+            links=[unescape(x) for x in re.findall(r'href="([^"]+)"',body)]
+            assert expected[title] in links, '迁移文章缺少对应来源链接：'+path+' '+title
+            found.add(title)
+        else:
+            legacy.append(path+' '+title)
+assert found==set(expected), '尚未核验全部六篇迁移文章：'+'、'.join(sorted(set(expected)-found))
+for article in legacy:
+    print('提示：另有旧文章仍公开（不属于公众号迁移文章）：'+article)
 for title in ['你好，世界','Spring Boot 起步笔记','为什么用 Thymeleaf']:
     assert title not in home,'首页仍展示默认示例：'+title
 _,identity=get('/identity')
