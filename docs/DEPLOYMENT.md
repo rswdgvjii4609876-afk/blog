@@ -159,7 +159,11 @@ python3 tests/deploy/verify.py
 Let’s Encrypt 已开放 IP 地址证书，要求 `shortlived` ACME profile，有效期约 160 小时。
 可用 HTTP-01 / TLS-ALPN-01 验证 IP 控制权，不能用 DNS-01。Caddy 2.11.7 已确认支持所需 profile 语法。
 
-操作流程：
+首次部署可在服务器执行 `python3 scripts/setup-ip.py 你的公网IPv4`，按隐藏提示输入两次自己的密码。
+脚本只在没有既有配置时创建权限 600 的 .env 和 Compose 覆盖文件，不打印密码，
+并执行 Compose 配置检查与启动。支持密码中的特殊字符，已通过真实容器验证值不会被变量插值改变。
+
+手动操作流程：
 
 1. 在云防火墙中放行 TCP 80 和 443，保持 SSH 规则，不向公网开放 8080。
 2. 将 `.env` 的 BLOG_DOMAIN 设置为你控制的公网 IP，并设置自己的管理员密码。

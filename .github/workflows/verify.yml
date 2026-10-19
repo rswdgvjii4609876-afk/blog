@@ -39,6 +39,8 @@ jobs:
         run: node tests/browser/workflow.cjs
       - name: Build deployment image
         run: docker build -t zhixing-blog:ci .
+      - name: Verify private deployment initializer
+        run: python3 -m unittest discover -s tests/setup -v
       - name: Verify container, trusted HTTPS and persistent volume
         env:
           BLOG_TEST_IMAGE: zhixing-blog:ci

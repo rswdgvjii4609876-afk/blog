@@ -159,7 +159,16 @@ docker compose logs --tail=80 app
 ### 没有域名：公网 IP HTTPS
 
 Caddy 2.11.7 与 Let’s Encrypt 的短期 IP 证书可用于公网 IPv4/IPv6，无需先购买域名。
-设置 `.env` 中的 `BLOG_DOMAIN` 为自己的公网 IP，然后：
+首次部署可以在服务器交互式设置，不在命令行传密码：
+
+```bash
+python3 scripts/setup-ip.py 你的公网IPv4
+```
+
+按提示输入两次自己的管理员密码（输入时不显示字符）。脚本会创建权限为 600 的私密配置，
+启用 IP HTTPS 覆盖文件并启动 Compose；已有配置时拒绝覆盖。实际证书签发仍需检查 Caddy 日志。
+
+也可手动设置 `.env` 中的 `BLOG_DOMAIN` 为自己的公网 IP，然后：
 
 ```bash
 cp deploy/compose.ip.override.yaml compose.override.yaml
