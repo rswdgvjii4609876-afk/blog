@@ -93,3 +93,11 @@ JavaScript 只增强预览、复制和离页提醒；核心的发布、编辑、
 评论默认 PENDING，仅 APPROVED 可公开；HIDDEN 可重新通过。管理员操作携带版本号，旧窗口不能覆盖新审核状态。公开列表和审核列表均分页，索引覆盖文章/状态/时间与审核队列。文本始终 `th:text` 转义，不走 Markdown HTML 渲染。
 
 所有修改仍使用普通 POST + CSRF。匿名标识是随机 UUID Cookie（HttpOnly / SameSite=Lax，HTTPS 下 Secure），并非账户或身份认证。服务只在有界内存中短期保留限流用 IP，不将 IP 写入评论或评分数据库。Cookie 可以清除，攻击者也能模拟多个浏览器，因此仍需人工审核，评分不具备严格防刷保证。
+
+## 首页互动与独立工作台
+
+V3 新增 site_settings、mood_entries、guest_messages、reader_polls、poll_votes。CommunityData 提供实体映射与结构校验，CommunityService 用参数化 JDBC 在事务内处理聚合与写入。实体不暴露写 API；固定记录的锁协调欢迎语/当前投票与每日签到，投票行锁协调重复或并发投票。唯一约束限制每天每浏览器一份心情、每投票每浏览器一票，以及最多一个当前投票（active_slot=1，已结束为 NULL）。
+
+欢迎语和留言审核/回复携带版本号；留言默认 PENDING，回复不会自动公开留言。每天按北京时间划分，公开的只有当天心情分布；评论、评分与文章修订保持独立。访客标识复用 reader_id Cookie，IP 仅用于有界内存限流。匿名标识不等于实名身份，不能严格防刷。
+
+读者 `/` 和文章页不渲染管理链接；`/identity` 只提供导航。身份选择不授予任何权限，public/shared 仍由 Spring Security 保护全部 `/admin/**`。作者登录成功进入 `/admin/overview`，可另开读者首页预览；退出作者身份可在身份页注销会话。开发 dev 仍保持回环监听的免登录演示。
