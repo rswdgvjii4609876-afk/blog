@@ -24,10 +24,20 @@ public class CommunityController {
         flash.addFlashAttribute("moodNotice","已记下今天的心情，愿你在这里收获一点温暖。");
         return "redirect:/#mood";
     }
-    @PostMapping("/community/polls/{id}/vote") public String vote(@PathVariable long id,@RequestParam int option,HttpServletRequest request,RedirectAttributes flash) {
+    @PostMapping("/community/polls/{id}/vote") public String vote(@PathVariable long id,@RequestParam int option,@RequestParam(required=false) String otherText,HttpServletRequest request,RedirectAttributes flash) {
         limiter.check(request.getRemoteAddr(),"poll",15);
-        service.vote(id,ReaderIdentity.read(request),option);
+        service.vote(id,ReaderIdentity.read(request),option,otherText);
         flash.addFlashAttribute("communityNotice","投票已保存，谢谢你参与！"); return "redirect:/#community";
+    }
+    public record PollState(long id, boolean open, java.time.Instant endsAt, java.time.Instant serverNow,
+                            java.util.List<CommunityService.Option> results, Long votes) { }
+    @GetMapping("/community/polls/{id}/status") @ResponseBody
+    public org.springframework.http.ResponseEntity<PollState> pollStatus(@PathVariable long id,HttpServletRequest request) {
+        var poll=service.poll(id,ReaderIdentity.read(request));
+        boolean showResults=!poll.open() || poll.ownChoice()!=null;
+        return org.springframework.http.ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+            .body(new PollState(poll.id(),poll.open(),poll.endsAt(),poll.serverNow(),
+                showResults?poll.options():java.util.List.of(),showResults?poll.votes():null));
     }
     @PostMapping("/community/messages") public String message(@RequestParam String nickname,@RequestParam String body,
             @RequestParam(defaultValue="") String website,HttpServletRequest request,RedirectAttributes flash) {
@@ -46,8 +56,28 @@ public class CommunityController {
     @PostMapping("/admin/community/welcome") public String welcome(@RequestParam String welcome,@RequestParam long version,RedirectAttributes flash) {
         service.welcome(welcome,version); return done(flash);
     }
-    @PostMapping("/admin/community/polls") public String createPoll(@RequestParam String question,@RequestParam String options,RedirectAttributes flash) {
-        service.createPoll(question,options); return done(flash);
+    @PostMapping("/admin/community/polls") public String createPoll(@RequestParam String question,
+            @RequestParam java.util.List<String> options,@RequestParam(defaultValue="24") String duration,
+            @RequestParam(required=false) Long customHours,@RequestParam(defaultValue="false") boolean otherEnabled,
+            RedirectAttributes flash) {
+        long hours = switch(duration) {
+            case "24" -> 24; case "48" -> 48; case "72" -> 72; case "168" -> 168;
+            case "custom" -> customHours == null ? 0 : customHours;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        };
+        service.createPoll(question,options,hours,otherEnabled); return done(flash);
+    }
+    @PostMapping("/admin/community/polls/{id}/extend") public String extendPoll(@PathVariable long id,
+            @RequestParam long version,@RequestParam long hours,RedirectAttributes flash) {
+        service.extendPoll(id,version,hours); return done(flash);
+    }
+    @GetMapping("/admin/community/polls/{id}/other") public String otherResponses(@PathVariable long id,
+            @RequestParam(defaultValue="0") int page,Model model) {
+        var rows=service.otherResponses(id,page); long count=service.otherResponseCount(id);
+        if(page>0 && (long)page*10>=count) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        model.addAttribute("poll",service.poll(id,null)); model.addAttribute("responses",rows);
+        model.addAttribute("page",page); model.addAttribute("total",count);
+        return "admin/poll-other";
     }
     @PostMapping("/admin/community/polls/{id}/close") public String closePoll(@PathVariable long id,@RequestParam long version,RedirectAttributes flash) {
         service.closePoll(id,version); return done(flash);

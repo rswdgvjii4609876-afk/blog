@@ -46,10 +46,10 @@ class CommunityWebTest {
     }
     @Test void pollResultsAreOnlyRenderedAfterVotingAndDashboardIsSeparate() throws Exception {
         community.createPoll("选择话题","Java\n生活"); var poll=community.home(null,0).poll();
-        var cookie=mvc.perform(get("/")).andExpect(content().string(not(containsString("poll-count")))).andReturn().getResponse().getCookie("reader_id");
+        var cookie=mvc.perform(get("/")).andExpect(content().string(not(containsString("class=\"poll-count\"")))).andReturn().getResponse().getCookie("reader_id");
         mvc.perform(post("/community/polls/{id}/vote",poll.id()).with(csrf()).cookie(cookie).param("option","1"))
             .andExpect(redirectedUrl("/#community"));
-        mvc.perform(get("/").cookie(cookie)).andExpect(content().string(containsString("poll-count")));
+        mvc.perform(get("/").cookie(cookie)).andExpect(content().string(containsString("class=\"poll-count\"")));
         mvc.perform(get("/admin/overview").with(user("test-author"))).andExpect(status().isOk())
             .andExpect(content().string(containsString("作者工作台"))).andExpect(content().string(containsString("首页欢迎语")));
         mvc.perform(get("/admin/messages").with(user("test-author"))).andExpect(status().isOk());

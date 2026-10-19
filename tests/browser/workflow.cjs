@@ -106,7 +106,16 @@ async function noOverflow(page) {
     await page.getByRole('button', {name: '保存欢迎语'}).click();
     await page.waitForURL(base + '/admin/overview');
     await page.locator('#poll-question').fill('下一篇，你想读什么？');
-    await page.locator('#poll-options').fill('学习笔记\n生活记录');
+    await page.locator('#poll-option-1').fill('学习笔记');
+    await page.locator('#poll-option-2').fill('生活记录');
+    await page.getByRole('button', {name: '＋ 添加选项'}).click();
+    await page.locator('#poll-option-3').fill('临时选项');
+    await page.getByRole('button', {name: '删除选项 2', exact: true}).click();
+    assert.equal(await page.locator('.poll-edit-row').count(), 2);
+    await page.locator('#poll-option-2').fill('生活记录');
+    await page.locator('#poll-duration').selectOption('custom');
+    await page.locator('#poll-custom-hours').fill('48');
+    await page.locator('#poll-other-enabled').check();
     await page.getByRole('button', {name: '发布投票'}).click();
     await page.waitForURL(base + '/admin/overview');
     const homeVisitor = await browser.newContext({viewport: {width: 390, height: 844}});
@@ -131,10 +140,64 @@ async function noOverflow(page) {
     await homeReader.locator('.poll-option').first().click();
     await homeReader.getByRole('button', {name: '参与投票'}).click();
     await homeReader.getByRole('status').filter({hasText: '投票已保存'}).waitFor();
-    await homeReader.locator('.poll-option').last().click();
+    await homeReader.locator('.poll-option').nth(1).click();
     await homeReader.getByRole('button', {name: '修改选择'}).click();
     await homeReader.getByRole('status').filter({hasText: '投票已保存'}).waitFor();
     assert((await homeReader.locator('.poll-card').textContent()).includes('共 1 份投票'));
+    await homeReader.locator('.poll-countdown').waitFor();
+    assert((await homeReader.locator('.poll-countdown').textContent()).includes('剩余'));
+    await homeReader.locator('.poll-option').last().click();
+    await homeReader.locator('#poll-other-text').fill('<script>privateOtherBrowser=1</script> 我自己的想法');
+    await homeReader.getByRole('button', {name: '修改选择'}).click();
+    await homeReader.getByRole('status').filter({hasText: '投票已保存'}).waitFor();
+    assert(!(await homeReader.content()).includes('privateOtherBrowser'));
+    const publicState = await homeVisitor.request.get(base + await homeReader.locator('[data-status-url]').getAttribute('data-status-url'));
+    assert(!(await publicState.text()).includes('privateOtherBrowser'));
+    await page.goto(base + '/admin/overview');
+    await page.getByRole('link', {name: '查看“其他”答案（仅作者）'}).click();
+    assert((await page.locator('main').textContent()).includes('<script>privateOtherBrowser=1</script>'));
+    assert.equal(await page.locator('main script').count(), 0);
+    await page.goto(base + '/admin/overview');
+    await page.locator('.poll-extension input[name="hours"]').fill('24');
+    await page.getByRole('button', {name: '延长截止时间'}).click();
+    await page.getByRole('status').filter({hasText: '已保存'}).waitFor();
+    await homeReader.reload();
+    assert((await homeReader.locator('.poll-countdown').textContent()).includes('剩余'));
+    console.log('PASS: numbered option add/remove, custom duration, private Other answer and author extension');
+    // Exercise expiry and extension in a real browser without waiting hours or changing the DB clock.
+    const timerVisitor = await browser.newContext({viewport: {width: 390, height: 844}});
+    const timerPage = await timerVisitor.newPage();
+    const statusPath = await homeReader.locator('[data-status-url]').getAttribute('data-status-url');
+    const initialTimerNow = new Date().toISOString();
+    const shortEnd = new Date(Date.now() + 3500).toISOString();
+    let extendedTimer = false;
+    await timerPage.route(base + '/', async route => {
+        const response = await route.fetch();
+        let html = await response.text();
+        html = html.replace(/data-ends-at="[^"]*"/, `data-ends-at="${shortEnd}"`)
+            .replace(/data-server-now="[^"]*"/, `data-server-now="${initialTimerNow}"`);
+        await route.fulfill({response, body: html});
+    });
+    await timerPage.route(base + statusPath, route => route.fulfill({contentType: 'application/json', body: JSON.stringify({
+        id: Number(statusPath.match(/polls\/(\d+)/)[1]), open: extendedTimer,
+        serverNow: new Date().toISOString(), endsAt: extendedTimer ? new Date(Date.now() + 3600000).toISOString() : shortEnd,
+        results: extendedTimer ? [] : [{index:0,label:'学习笔记',votes:0},{index:1,label:'生活记录',votes:0},{index:6,label:'其他',votes:1}],
+        votes: extendedTimer ? null : 1
+    })}));
+    await timerPage.goto(base);
+    await timerPage.getByRole('button', {name: '投票已结束'}).waitFor();
+    assert(await timerPage.getByRole('button', {name: '投票已结束'}).isDisabled());
+    await timerPage.waitForFunction(() => document.querySelector('.poll-total')?.textContent.includes('1'));
+    extendedTimer = true;
+    await timerPage.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await timerPage.waitForFunction(() => !document.querySelector('.poll-vote-form button[type=submit]').disabled);
+    await timerPage.locator('.poll-option').last().click();
+    assert(await timerPage.locator('#poll-other-text').isVisible());
+    assert.equal(await timerPage.locator('.poll-count').count(), 0);
+    await timerVisitor.close();
+    console.log('PASS: live countdown expiry disables vote and shows results; extension restores voting');
+
+
     await homeReader.locator('#wall-nickname').fill('家里的读者');
     await homeReader.locator('#wall-body').fill('希望多写点生活。<script>window.wallXss=1</script>');
     await homeReader.getByRole('button', {name: '送出留言'}).click();
@@ -281,9 +344,13 @@ async function noOverflow(page) {
     await page.getByRole('button', {name: '结束投票'}).click();
     await page.getByRole('status').filter({hasText: '已保存'}).waitFor();
     await homeReader.reload();
-    assert.equal(await homeReader.locator('.poll-card').count(), 0);
+    assert.equal(await homeReader.locator('.poll-card').count(), 1);
+    assert(await homeReader.getByRole('button', {name: '投票已结束'}).isDisabled());
+    assert((await homeReader.locator('.poll-status').textContent()).includes('已结束'));
+    assert((await homeReader.locator('.poll-card').textContent()).includes('共 1 份投票'));
+    assert(!(await homeReader.content()).includes('privateOtherBrowser'));
     await homeVisitor.close();
-    console.log('PASS: community settings/votes/replies survive restart and closing poll removes public voting');
+    console.log('PASS: community settings/votes/replies survive restart and closing poll disables voting while preserving results');
 
 
     await page.goto(base + editPath);

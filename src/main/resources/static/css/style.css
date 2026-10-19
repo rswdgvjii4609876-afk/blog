@@ -487,3 +487,27 @@ button:disabled { cursor: wait; opacity: .65; }
 .reading-shell .feedback-hint { font-size: 15px; }
 .rating-help { margin-block: 18px; font-size: 15px; color: var(--color-secondary); }
 .rating-help summary { cursor: pointer; min-height: 44px; padding-block: 8px; }
+
+.poll-editor-options { min-width: 0; border: 1px solid var(--color-border); border-radius: 12px; padding: 18px; margin: 0; }
+.poll-editor-options legend { padding-inline: 8px; }
+.poll-edit-row { padding-block: 14px; border-bottom: 1px solid var(--color-border); }
+.poll-edit-row label { display: block; margin-bottom: 8px; font-weight: 600; }
+.poll-edit-controls { display: flex; gap: 10px; align-items: center; }
+.poll-edit-controls input { flex: 1; min-width: 0; }
+.poll-edit-controls button { flex-shrink: 0; }
+#add-poll-option { margin-top: 16px; }
+.simple-form select { min-height: 44px; min-width: 0; width: 100%; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px; background: var(--color-background); color: var(--color-text); }
+.simple-form .poll-other-toggle { display: flex; gap: 12px; align-items: flex-start; }
+.simple-form .poll-other-toggle input { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 4px; }
+.poll-admin-results { padding-left: 25px; }
+.poll-admin-results li { padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.poll-admin-results strong { float: right; margin-left: 12px; }
+.poll-extension { padding-block: 20px; }
+.poll-timing { padding: 14px 16px; background: var(--color-muted); border-radius: 10px; margin-bottom: 20px; }
+.poll-countdown { display: block; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.poll-timing p { margin: 6px 0 0; font-size: 15px; color: var(--color-secondary); }
+.poll-other-input { margin-block: 16px; }
+.poll-other-input label { display: block; margin-bottom: 10px; }
+.poll-other-input textarea { width: 100%; resize: vertical; min-width: 0; padding: 12px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); background: var(--color-background); }
+.poll-vote-form fieldset:disabled { opacity: .8; }
+@media(max-width:450px) { .poll-edit-controls { flex-wrap: wrap; } .poll-edit-controls input { flex-basis: 100%; } }
