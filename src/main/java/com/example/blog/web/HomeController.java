@@ -28,18 +28,21 @@ public class HomeController {
     private final PostRepository postRepository;
     private final MarkdownService markdown;
     private final ReaderFeedbackService feedback;
+    private final com.example.blog.service.CommunityService community;
 
-    public HomeController(PostRepository postRepository, MarkdownService markdown, ReaderFeedbackService feedback) {
+    public HomeController(PostRepository postRepository, MarkdownService markdown, ReaderFeedbackService feedback, com.example.blog.service.CommunityService community) {
         this.postRepository = postRepository;
         this.markdown = markdown;
         this.feedback = feedback;
+        this.community = community;
     }
 
     @GetMapping("/")
     public String index(
         @RequestParam(name = "q", defaultValue = "") String q,
         @RequestParam(name = "page", defaultValue = "0") int page,
-        Model model
+        @RequestParam(defaultValue = "0") int wallPage,
+        HttpServletRequest request, HttpServletResponse response, Model model
     ) {
         String keyword = q.strip();
         if (keyword.length() > 100) {
@@ -60,6 +63,13 @@ public class HomeController {
         model.addAttribute("postPage", postPage);
         model.addAttribute("posts", postPage.getContent());
         model.addAttribute("q", keyword);
+        var home = community.home(ReaderIdentity.ensure(request, response), wallPage);
+        model.addAttribute("community", home);
+        model.addAttribute("welcome", home == null ? com.example.blog.service.CommunityService.DEFAULT_WELCOME : home.settings().welcome());
+        if (page == 0 && keyword.isEmpty() && postPage.hasContent()) {
+            String text = org.jsoup.Jsoup.parse(markdown.render(postPage.getContent().getFirst().getContent()).html()).text();
+            model.addAttribute("latestExcerpt", text.substring(0, Math.min(700, text.length())));
+        }
         return "index";
     }
 

@@ -17,12 +17,12 @@
             <a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a>
             <div class="nav-links">
                 <a class="nav-link" th:href="@{/}">首页</a>
-                <a class="nav-link" th:href="@{/admin/posts}">后台管理</a>
-            <form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div>
+                <a class="nav-link" th:href="@{/identity}">身份切换</a>
+            </div>
         </nav>
     </header>
 
-    <div class="reading-status"><span>READING MODE</span><progress id="reading-progress" max="100" value="0" aria-label="文章阅读进度"></progress><span id="reading-percent" aria-live="off">0%</span></div>
+    <div class="reading-status"><span>阅读进度</span><progress id="reading-progress" max="100" value="0" aria-label="文章阅读进度"></progress><span id="reading-percent" aria-live="off">0%</span></div>
     <main id="main-content" class="reading-shell">
         <p class="notice notice-success" th:if="${notice}" th:text="${notice}" role="status"></p>
         <a class="back-link" th:href="@{/}">
@@ -47,7 +47,7 @@
         </article>
 
         <section id="discussion" class="discussion" th:if="${feedback != null}" aria-labelledby="discussion-title">
-            <div class="section-heading"><div><p class="eyebrow">READER NOTES</p><h2 id="discussion-title">读后，留一点回响</h2></div><span class="article-count" th:text="|${feedback.comments.totalElements} 条评论|">评论</span></div>
+            <div class="section-heading"><div><h2 id="discussion-title">读后，留一点回响</h2></div><span class="article-count" th:text="|${feedback.comments.totalElements} 条评论|">评论</span></div>
             <p class="notice notice-success" th:if="${feedbackNotice}" th:text="${feedbackNotice}" role="status"></p>
             <p class="notice" th:if="${feedbackError}" th:text="${feedbackError}" role="alert"></p>
             <div class="rating-panel">
@@ -59,7 +59,7 @@
                     <button class="button button-secondary" type="submit">保存评分</button>
                 </form>
             </div>
-            <p class="feedback-hint">无需注册。使用浏览器 Cookie 记住评分，重复评分会更新；清除 Cookie 或更换设备会被视为新的访客。</p>
+            <details class="rating-help"><summary>评分说明</summary><p class="feedback-hint">无需注册。使用浏览器 Cookie 记住评分，重复评分会更新；清除 Cookie 或更换设备会被视为新的访客。</p></details>
             <form class="comment-form" method="post" th:action="@{/posts/{id}/comments(id=${post.id})}">
                 <h3>写下你的想法</h3><p class="feedback-hint">评论经审核后公开。请友善交流，勿填写联系方式或其他隐私。仅支持纯文本。</p>
                 <label for="comment-nickname">昵称</label><input id="comment-nickname" name="nickname" maxlength="40" required autocomplete="nickname" th:value="${commentNickname}">

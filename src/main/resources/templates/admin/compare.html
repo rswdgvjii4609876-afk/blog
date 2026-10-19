@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>版本对比 · 知行</title><script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}"></head>
-<body><header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
+<body><header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/admin/overview}">工作台</a><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
 <main class="site-container admin-page">
     <a class="back-link" th:href="@{/admin/posts/{id}/history/{rid}(id=${post.id},rid=${revision.id})}">← 返回历史快照</a>
     <header class="history-heading"><p class="eyebrow">VERSION DIFF / 看见每一次完善</p><h1>改了什么，一目了然。</h1><p class="page-description" th:text="|历史版本 ${revision.number} → 当前版本 ${post.version + 1}|"></p></header>

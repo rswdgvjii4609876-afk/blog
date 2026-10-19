@@ -2,7 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>评论审核 · 知行</title><script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}"><script defer th:src="@{/js/blog.js}"></script></head>
 <body><a class="skip-link" href="#main-content">跳到主要内容</a>
-<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><a class="nav-link" th:href="@{/}">返回博客</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
+<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><div class="nav-links"><a class="nav-link" th:href="@{/admin/overview}">工作台</a><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><a class="nav-link" th:href="@{/}">返回博客</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
 <main id="main-content" class="site-container admin-page">
     <div class="page-heading"><p class="eyebrow">CONVERSATIONS</p><h1>评论审核</h1><p class="page-description">让有价值的讨论留下来。新评论默认不会公开。</p></div>
     <p class="notice notice-success" th:if="${notice}" th:text="${notice}" role="status"></p>

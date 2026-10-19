@@ -38,7 +38,7 @@ class PublicAccessTest {
             .andExpect(redirectedUrl("/login?error"));
         var loggedIn = mvc.perform(post("/login").with(csrf()).param("username", "test-author")
                 .param("password", "Test-only-long-password-2026"))
-            .andExpect(redirectedUrl("/admin/posts")).andReturn();
+            .andExpect(redirectedUrl("/admin/overview")).andReturn();
         var session = (org.springframework.mock.web.MockHttpSession) loggedIn.getRequest().getSession(false);
         mvc.perform(get("/admin/posts/new").session(session)).andExpect(status().isOk())
             .andExpect(content().string(containsString("退出登录")));

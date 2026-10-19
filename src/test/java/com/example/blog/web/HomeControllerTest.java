@@ -22,7 +22,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +56,9 @@ class HomeControllerTest {
     @MockitoBean
     private com.example.blog.service.ReaderFeedbackService feedback;
 
+    @MockitoBean
+    private com.example.blog.service.CommunityService community;
+
     @Test
     void indexRendersPostsWhenPresent() throws Exception {
         var pageable = PageRequest.of(0, 5, POST_SORT);
@@ -71,15 +73,14 @@ class HomeControllerTest {
             .andExpect(view().name("index"))
             .andExpect(content().string(containsString("知行")))
             .andExpect(model().attribute("q", ""))
-            .andExpect(content().string(containsString("action=\"/\" method=\"get\"")))
-            .andExpect(content().string(containsString("type=\"search\" name=\"q\"")))
+            .andExpect(content().string(containsString("role=\"search\"")))
+            .andExpect(content().string(containsString("type=\"search\"")))
             .andExpect(content().string(containsString("公开文章 1")))
             .andExpect(content().string(containsString("公开文章 5")))
             .andExpect(content().string(containsString("最新文章")))
             .andExpect(content().string(not(containsString("未公开"))))
             .andExpect(model().attribute("posts", posts))
             .andExpect(model().attribute("postPage", postPage))
-            .andExpect(content().string(containsString("共 <span>6</span> 篇")))
             .andExpect(content().string(containsString("第 1 / 2 页")))
             .andExpect(content().string(containsString("aria-disabled=\"true\">上一页</span>")))
             .andExpect(content().string(not(containsString("rel=\"prev\""))))
@@ -87,7 +88,7 @@ class HomeControllerTest {
             .andReturn();
 
         assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)
-            .split("<article class=\"article-row\">")).hasSize(6);
+            .split("<article class=\"article-row")).hasSize(6);
         mockMvc.perform(get("/").param("page", "0").param("size", "1").param("sort", "id,asc"))
             .andExpect(status().isOk())
             .andExpect(model().attribute("postPage", postPage));
@@ -110,7 +111,6 @@ class HomeControllerTest {
             .andExpect(view().name("index"))
             .andExpect(content().string(containsString("暂无已发布文章")))
             .andExpect(content().string(not(containsString("未公开"))))
-            .andExpect(content().string(containsString("共 <span>0</span> 篇")))
             .andExpect(content().string(not(containsString("class=\"pagination\""))))
             .andExpect(model().attribute("posts", List.of()));
 
@@ -123,7 +123,7 @@ class HomeControllerTest {
     }
 
     @Test
-    void indexIncludesAdminLink() throws Exception {
+    void indexOffersIdentitySwitchInsteadOfManagementLinks() throws Exception {
         var pageable = PageRequest.of(0, 5, POST_SORT);
         var post = new Post("单篇文章", "摘要", "正文", PostStatus.PUBLISHED);
         when(postRepository.findByStatus(PostStatus.PUBLISHED, pageable))
@@ -131,8 +131,8 @@ class HomeControllerTest {
 
         mockMvc.perform(get("/"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("/admin/posts")))
-            .andExpect(content().string(containsString("后台管理")))
+            .andExpect(content().string(not(containsString("href=\"/admin/"))))
+            .andExpect(content().string(containsString("身份切换")))
             .andExpect(content().string(containsString("单篇文章")))
             .andExpect(content().string(not(containsString("class=\"pagination\""))));
     }
@@ -152,7 +152,6 @@ class HomeControllerTest {
             .andExpect(view().name("index"))
             .andExpect(model().attribute("posts", posts))
             .andExpect(model().attribute("postPage", postPage))
-            .andExpect(content().string(containsString("共 <span>" + total + "</span> 篇")))
             .andExpect(content().string(containsString("href=\"/?page=0\"")))
             .andExpect(content().string(containsString(hasNext ? "第 2 / 3 页" : "第 2 / 2 页")));
         if (hasNext) {
@@ -162,7 +161,7 @@ class HomeControllerTest {
                 .andExpect(content().string(not(containsString("rel=\"next\""))));
         }
         assertThat(result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
-            .split("<article class=\"article-row\">")).hasSize(count + 1);
+            .split("<article class=\"article-row")).hasSize(count + 1);
         verify(postRepository).findByStatus(PostStatus.PUBLISHED, pageable);
     }
 
@@ -233,7 +232,6 @@ class HomeControllerTest {
             .andExpect(content().string(containsString("value=\"Spring\"")))
             .andExpect(content().string(containsString("搜索结果")))
             .andExpect(content().string(containsString("清除搜索")))
-            .andExpect(content().string(containsString("共 <span>6</span> 篇")))
             .andExpect(content().string(containsString("href=\"/?q=Spring&amp;page=1\"")))
             .andExpect(content().string(not(containsString("name=\"page\""))));
 
@@ -256,7 +254,6 @@ class HomeControllerTest {
             .andExpect(status().isOk())
             .andExpect(model().attribute("posts", posts))
             .andExpect(model().attribute("postPage", postPage))
-            .andExpect(content().string(containsString("共 <span>11</span> 篇")))
             .andExpect(content().string(containsString("第 2 / 3 页")))
             .andExpect(content().string(containsString("href=\"/?q=spring&amp;page=0\"")))
             .andExpect(content().string(containsString("href=\"/?q=spring&amp;page=2\"")))
@@ -277,7 +274,6 @@ class HomeControllerTest {
             .andExpect(model().attribute("q", "missing"))
             .andExpect(content().string(containsString("没有找到与“missing”匹配的文章")))
             .andExpect(content().string(containsString("试试其他关键词，或清除搜索查看全部文章。")))
-            .andExpect(content().string(containsString("共 <span>0</span> 篇")))
             .andExpect(content().string(not(containsString("暂无已发布文章"))))
             .andExpect(content().string(not(containsString("class=\"pagination\""))));
         mockMvc.perform(get("/").param("q", "missing").param("page", "1"))
@@ -321,10 +317,10 @@ class HomeControllerTest {
             .andExpect(content().string(containsString("value=\"&quot;&gt;&lt;script&gt;")))
             .andExpect(content().string(not(containsString("<script>"))))
             .andReturn();
-        var nextLink = Pattern.compile("href=\"([^\"]+)\" rel=\"next\"")
-            .matcher(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
-        assertThat(nextLink.find()).isTrue();
-        assertThat(URLDecoder.decode(nextLink.group(1).replace("&amp;", "&"), StandardCharsets.UTF_8))
+        var nextLink = org.jsoup.Jsoup.parse(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+            .selectFirst("a[rel=next]");
+        assertThat(nextLink).isNotNull();
+        assertThat(URLDecoder.decode(nextLink.attr("href"), StandardCharsets.UTF_8))
             .isEqualTo("/?q=" + keyword + "&page=1");
 
         when(postRepository.searchByStatus(PostStatus.PUBLISHED, keyword, pageable)).thenReturn(Page.empty(pageable));

@@ -125,7 +125,7 @@ with tempfile.TemporaryDirectory(prefix=prefix) as temporary:
             response, body = get("/admin/posts")
             assert response.url.endswith("/login")
             response, _ = post("/login", {"_csrf": token(body), "username": "deploy-author", "password": password})
-            assert response.url.endswith("/admin/posts")
+            assert response.url.endswith("/admin/overview")
             assert any(cookie.secure for cookie in jar), "Public sessions must use Secure cookies"
 
         ready()

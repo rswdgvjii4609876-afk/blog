@@ -3,7 +3,7 @@
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>文章成长记录 · 知行</title><script th:src="@{/js/theme.js}"></script><link rel="stylesheet" th:href="@{/css/style.css}"></head>
 <body>
-<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><span class="nav-context">文章成长记录</span><div class="nav-links"><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
+<header class="site-header"><nav class="site-nav" aria-label="后台导航"><a class="brand" th:href="@{/}">知行<span class="brand-dot">.</span></a><span class="nav-context">文章成长记录</span><div class="nav-links"><a class="nav-link" th:href="@{/admin/overview}">工作台</a><a class="nav-link" th:href="@{/admin/posts}">文章管理</a><form class="logout-form" method="post" th:if="${adminAuthenticated}" th:action="@{/logout}"><button class="nav-link" type="submit">退出登录</button></form></div></nav></header>
 <main class="site-container admin-page">
     <a class="back-link" th:href="@{/admin/posts/{id}/edit(id=${post.id})}">← 返回编辑</a>
     <header class="history-heading"><p class="eyebrow">REVISION JOURNAL / 文章成长记录</p><h1 th:text="${post.title}">标题</h1><p class="page-description">每次保存都是一次积累。恢复会创建新版本，并将文章转为草稿，不会删除原有记录。</p></header>

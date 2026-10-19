@@ -29,7 +29,7 @@ public class SecurityConfig {
             http.addFilterBefore(new LoginThrottleFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
             http.authorizeHttpRequests(auth -> auth.requestMatchers("/admin", "/admin/**").authenticated()
                     .anyRequest().permitAll())
-                .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/admin/posts", true)
+                .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/admin/overview", true)
                     .failureUrl("/login?error").permitAll())
                 .logout(logout -> logout.logoutSuccessUrl("/?signedout").deleteCookies("JSESSIONID"));
         } else {

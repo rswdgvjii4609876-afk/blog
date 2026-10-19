@@ -91,9 +91,64 @@ async function noOverflow(page) {
         await page.locator('#username').fill('browser-author');
         await page.locator('#password').fill(testPassword);
         await page.getByRole('button', {name: '进入创作台 ↗'}).click();
-        await page.waitForURL(base + '/admin/posts');
+        await page.waitForURL(base + '/admin/overview');
     };
     await login();
+    await page.goto(base + '/admin/overview');
+    await page.locator('#welcome').fill('欢迎来到我的博客，一起看看新的故事。');
+    await page.getByRole('button', {name: '保存欢迎语'}).click();
+    await page.waitForURL(base + '/admin/overview');
+    await page.locator('#poll-question').fill('下一篇，你想读什么？');
+    await page.locator('#poll-options').fill('学习笔记\n生活记录');
+    await page.getByRole('button', {name: '发布投票'}).click();
+    await page.waitForURL(base + '/admin/overview');
+    const homeVisitor = await browser.newContext({viewport: {width: 390, height: 844}});
+    const homeReader = await homeVisitor.newPage();
+    homeReader.on('pageerror', error => scriptErrors.push(error.message));
+    await homeReader.goto(base);
+    assert((await homeReader.locator('h1').textContent()).includes('一起看看新的故事'));
+    assert.equal(await homeReader.locator('a[href^="/admin"]').count(), 0);
+    assert.equal(await homeReader.locator('.featured-post').count(), 1);
+    assert(await homeReader.locator('.latest-excerpt').isVisible());
+    await homeReader.getByRole('link', {name: '身份切换'}).click();
+    await homeReader.getByRole('link', {name: /我是作者/}).click();
+    await homeReader.waitForURL(base + (authenticatedMode ? '/login' : '/admin/overview'));
+    await homeReader.goto(base);
+    for (const mood of ['开心', '期待']) {
+        await homeReader.locator('.mood-choices button').filter({hasText: mood}).click();
+        await homeReader.getByRole('status').filter({hasText: '已记下'}).waitFor();
+    }
+    assert((await homeReader.locator('.mood-choices button[aria-pressed="true"]').textContent()).includes('期待'));
+    assert.equal(await homeReader.locator('.mood-count').evaluateAll(nodes => nodes.reduce((sum,n) => sum + Number(n.textContent),0)), 1);
+    assert.equal(await homeReader.locator('.poll-count').count(), 0);
+    await homeReader.locator('.poll-option').first().click();
+    await homeReader.getByRole('button', {name: '参与投票'}).click();
+    await homeReader.getByRole('status').filter({hasText: '投票已保存'}).waitFor();
+    await homeReader.locator('.poll-option').last().click();
+    await homeReader.getByRole('button', {name: '修改选择'}).click();
+    await homeReader.getByRole('status').filter({hasText: '投票已保存'}).waitFor();
+    assert((await homeReader.locator('.poll-card').textContent()).includes('共 1 份投票'));
+    await homeReader.locator('#wall-nickname').fill('家里的读者');
+    await homeReader.locator('#wall-body').fill('希望多写点生活。<script>window.wallXss=1</script>');
+    await homeReader.getByRole('button', {name: '送出留言'}).click();
+    await homeReader.getByRole('status').filter({hasText: '留言已收到'}).waitFor();
+    assert.equal(await homeReader.locator('.wall-card .reader-comment').count(), 0);
+    await page.goto(base + '/admin/messages');
+    await page.locator('textarea[name="reply"]').fill('谢谢你，会安排的。');
+    await page.getByRole('button', {name: '保存回复'}).click();
+    await page.getByRole('status').filter({hasText: '留言已处理'}).waitFor();
+    await page.getByRole('button', {name: '审核通过'}).click();
+    await page.getByRole('status').filter({hasText: '留言已处理'}).waitFor();
+    await homeReader.reload();
+    assert.equal(await homeReader.locator('.wall-card .reader-comment').count(), 1);
+    assert((await homeReader.locator('.author-reply').textContent()).includes('谢谢你，会安排的'));
+    assert.equal(await homeReader.evaluate(() => window.wallXss), undefined);
+    assert.equal(await homeReader.locator('.wall-card .reader-comment script').count(), 0);
+    await noOverflow(homeReader);
+    await homeReader.screenshot({path: path.join(screenshots, 'reader-home-mobile.png'), fullPage: true});
+    await page.goto(base + '/admin/overview');
+    await page.screenshot({path: path.join(screenshots, 'author-workspace.png'), fullPage: true});
+    console.log('PASS: content-first reader home, identity gate, daily mood, single-choice poll and moderated wall/reply');
 
     const title = '端到端验收：学习成长记录';
     const source = '## 从问题出发\n\n**先验证，再下结论。**\n\n```java\nSystem.out.println("hello");\n```\n\n<script>window.__xss = 1</script>\n\n[x](javascript:alert%281%29)';
@@ -210,6 +265,19 @@ async function noOverflow(page) {
     await page.goto(base + '/admin/posts');
     assert.equal(await page.locator('.admin-item').count(), 4, 'Restart must not duplicate seeds');
     console.log('PASS: article and all four revisions survive process restart');
+    await homeReader.goto(base);
+    assert((await homeReader.locator('h1').textContent()).includes('一起看看新的故事'));
+    assert((await homeReader.locator('.poll-card').textContent()).includes('共 1 份投票'));
+    assert((await homeReader.locator('.author-reply').textContent()).includes('谢谢你，会安排的'));
+    await page.goto(base + '/admin/overview');
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', {name: '结束投票'}).click();
+    await page.getByRole('status').filter({hasText: '已保存'}).waitFor();
+    await homeReader.reload();
+    assert.equal(await homeReader.locator('.poll-card').count(), 0);
+    await homeVisitor.close();
+    console.log('PASS: community settings/votes/replies survive restart and closing poll removes public voting');
+
 
     await page.goto(base + editPath);
     await page.locator('#status').selectOption('PUBLISHED');
@@ -234,7 +302,7 @@ async function noOverflow(page) {
     }
     for (const width of [320, 768]) {
         await mobile.setViewportSize({width, height: 900});
-        for (const suffix of ['/', '/posts/' + id, editPath, `/admin/posts/${id}/history`, '/admin/posts']) {
+        for (const suffix of ['/', '/identity', '/admin/overview', '/admin/messages?status=APPROVED', '/posts/' + id, editPath, `/admin/posts/${id}/history`, '/admin/posts']) {
             await mobile.goto(base + suffix);
             await noOverflow(mobile);
         }

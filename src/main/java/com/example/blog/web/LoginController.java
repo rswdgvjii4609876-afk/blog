@@ -10,5 +10,5 @@ public class LoginController {
     private final Environment environment;
     public LoginController(Environment environment) { this.environment = environment; }
     @GetMapping("/login")
-    public String login() { return SecurityConfig.loginRequired(environment) ? "login" : "redirect:/admin/posts"; }
+    public String login() { return SecurityConfig.loginRequired(environment) ? "login" : "redirect:/admin/overview"; }
 }
